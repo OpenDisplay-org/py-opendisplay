@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.1.0...v0.1.1) (2025-12-29)
+
+
+### Bug Fixes
+
+* add conftest ([673db99](https://github.com/OpenDisplay-org/py-opendisplay/commit/673db99bfa85608a2d5bcdea1a36d37b25e76b51))
+
 ## 0.1.0 (2025-12-29)
 
 
