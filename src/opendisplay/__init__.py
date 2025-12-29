@@ -4,6 +4,7 @@
   """
 
 from .device import OpenDisplayDevice
+from .discovery import discover_devices
 from .exceptions import (
     BLEConnectionError,
     BLETimeoutError,
@@ -42,6 +43,7 @@ __version__ = "0.1.0"
 __all__ = [
     # Main API
     "OpenDisplayDevice",
+    "discover_devices",
     # Exceptions
     "OpenDisplayError",
     "BLEConnectionError",

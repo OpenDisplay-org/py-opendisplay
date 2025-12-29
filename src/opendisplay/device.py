@@ -68,23 +68,51 @@ class OpenDisplayDevice:
 
     def __init__(
             self,
-            mac_address: str,
+            mac_address: str | None = None,
+            device_name: str | None = None,
             ble_device: BLEDevice | None = None,
             config: GlobalConfig | None = None,
             capabilities: DeviceCapabilities | None = None,
             timeout: float = 10.0,
+            discovery_timeout: float = 10.0,
     ):
         """Initialize OpenDisplay device.
 
         Args:
-            mac_address: Device MAC address
+            mac_address: Device MAC address (mutually exclusive with device_name)
+            device_name: Device name to resolve via BLE scan (mutually exclusive with mac_address)
             ble_device: Optional BLEDevice from HA bluetooth integration
             config: Optional full TLV config (skips interrogation)
             capabilities: Optional minimal device info (skips interrogation)
             timeout: BLE operation timeout in seconds (default: 10)
+            discovery_timeout: Timeout for name resolution scan (default: 10)
+
+        Raises:
+            ValueError: If neither or both mac_address and device_name provided
+
+        Examples:
+            # Using MAC address (existing behavior)
+            device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF")
+
+            # Using device name (new feature)
+            device = OpenDisplayDevice(device_name="OpenDisplay-A123")
         """
-        self.mac_address = mac_address
-        self._connection = BLEConnection(mac_address, ble_device, timeout)
+        # Validation: exactly one of mac_address or device_name must be provided
+        if mac_address and device_name:
+            raise ValueError("Provide either mac_address or device_name, not both")
+        if not mac_address and not device_name:
+            raise ValueError("Must provide either mac_address or device_name")
+
+        # Store for resolution in __aenter__
+        self._mac_address_param = mac_address
+        self._device_name = device_name
+        self._discovery_timeout = discovery_timeout
+        self._ble_device = ble_device
+        self._timeout = timeout
+
+        # Will be set after resolution
+        self.mac_address = mac_address or ""  # Resolved in __aenter__
+        self._connection = None  # Created after MAC resolution
 
         self._config = config
         self._capabilities = capabilities
@@ -92,6 +120,39 @@ class OpenDisplayDevice:
 
     async def __aenter__(self) -> OpenDisplayDevice:
         """Connect and optionally interrogate device."""
+
+        # Resolve device name to MAC address if needed
+        if self._device_name:
+            _LOGGER.debug("Resolving device name '%s' to MAC address", self._device_name)
+
+            from .discovery import discover_devices
+            from .exceptions import BLEConnectionError
+
+            devices = await discover_devices(timeout=self._discovery_timeout)
+
+            if self._device_name not in devices:
+                raise BLEConnectionError(
+                    f"Device '{self._device_name}' not found during discovery. "
+                    f"Available devices: {list(devices.keys())}"
+                )
+
+            self.mac_address = devices[self._device_name]
+            _LOGGER.info(
+                "Resolved device name '%s' to MAC address %s",
+                self._device_name,
+                self.mac_address,
+            )
+        else:
+            # MAC was provided directly
+            self.mac_address = self._mac_address_param
+
+        # Create connection with resolved MAC
+        self._connection = BLEConnection(
+            self.mac_address,
+            self._ble_device,
+            self._timeout,
+        )
+
         await self._connection.connect()
 
         # Auto-interrogate if no config or capabilities provided
@@ -255,6 +316,13 @@ class OpenDisplayDevice:
         """
         # Resize image to display dimensions
         if image.size != (self.width, self.height):
+            _LOGGER.warning(
+                "Resizing image from %dx%d to %dx%d (device display size)",
+                image.width,
+                image.height,
+                self.width,
+                self.height,
+            )
             image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
 
         # Apply dithering
