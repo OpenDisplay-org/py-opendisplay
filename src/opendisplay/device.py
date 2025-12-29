@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import struct
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -19,7 +20,9 @@ from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
 from .models.enums import ColorScheme, DitherMode, RefreshMode
 from .protocol import (
+    CHUNK_SIZE,
     MAX_COMPRESSED_SIZE,
+    PIPELINE_CHUNKS,
     ChunkAssembler,
     CommandCode,
     build_direct_write_data_command,
@@ -32,7 +35,7 @@ from .protocol import (
     parse_firmware_version,
     validate_ack_response,
 )
-from .protocol.responses import is_chunked_response
+from .protocol.responses import is_chunked_response, strip_command_echo
 from .transport import BLEConnection
 
 if TYPE_CHECKING:
@@ -215,7 +218,6 @@ class OpenDisplayDevice:
             Data with echo stripped (if present)
         """
         if len(data) >= 2:
-            import struct
             echo = struct.unpack(">H", data[0:2])[0]
             if echo == expected_cmd or echo == (expected_cmd | 0x8000):
                 return data[2:]
@@ -386,8 +388,6 @@ class OpenDisplayDevice:
         Raises:
             ProtocolError: If upload fails
         """
-        from .protocol import CHUNK_SIZE, PIPELINE_CHUNKS
-
         _LOGGER.debug("Starting uncompressed upload (%d bytes)", len(image_data))
 
         # 1. Send START command (NO DATA!)
@@ -429,7 +429,6 @@ class OpenDisplayDevice:
                 # Wait up to 90 seconds for the END response
                 response = await self._connection.read_response(timeout=90.0)
 
-            import struct
             response_code = struct.unpack(">H", response[0:2])[0]
 
             # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)

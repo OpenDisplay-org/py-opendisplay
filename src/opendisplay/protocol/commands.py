@@ -24,6 +24,7 @@ class CommandCode(IntEnum):
 # Protocol constants
 SERVICE_UUID = "00002446-0000-1000-8000-00805F9B34FB"
 MANUFACTURER_ID = 0x2446  # 9286 decimal
+RESPONSE_HIGH_BIT_FLAG = 0x8000  # High bit set in response codes indicates ACK
 
 # Chunking constants
 CHUNK_SIZE = 230  # Maximum data bytes per chunk

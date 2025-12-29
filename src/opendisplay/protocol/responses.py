@@ -5,6 +5,40 @@ from __future__ import annotations
 import struct
 
 from ..exceptions import InvalidResponseError, ProtocolError
+from .commands import RESPONSE_HIGH_BIT_FLAG, CommandCode
+
+
+def unpack_command_code(data: bytes, offset: int = 0) -> int:
+    """Extract 2-byte big-endian command code from response data.
+
+    Args:
+        data: Response data from device
+        offset: Byte offset to read from (default: 0)
+
+    Returns:
+        Command code as integer
+    """
+    return struct.unpack(">H", data[offset:offset+2])[0]
+
+
+def strip_command_echo(data: bytes, expected_cmd: CommandCode) -> bytes:
+    """Strip command echo from response data.
+
+    Firmware echoes commands in responses, sometimes with high bit set.
+    This function removes the 2-byte echo if present.
+
+    Args:
+        data: Response data from device
+        expected_cmd: Expected command echo
+
+    Returns:
+        Data with echo stripped (if present), otherwise original data
+    """
+    if len(data) >= 2:
+        echo = unpack_command_code(data)
+        if echo == expected_cmd or echo == (expected_cmd | RESPONSE_HIGH_BIT_FLAG):
+            return data[2:]
+    return data
 
 
 def validate_ack_response(data: bytes, expected_command: int) -> None:
@@ -22,10 +56,10 @@ def validate_ack_response(data: bytes, expected_command: int) -> None:
     if len(data) < 2:
         raise InvalidResponseError(f"ACK too short: {len(data)} bytes (need at least 2)")
 
-    response_code = struct.unpack(">H", data[0:2])[0]  # Big-endian
+    response_code = unpack_command_code(data)
 
-    # Response can be exact echo or with high bit set (0x8000 | cmd)
-    valid_responses = {expected_command, expected_command | 0x8000}
+    # Response can be exact echo or with high bit set (RESPONSE_HIGH_BIT_FLAG | cmd)
+    valid_responses = {expected_command, expected_command | RESPONSE_HIGH_BIT_FLAG}
 
     if response_code not in valid_responses:
         raise InvalidResponseError(
@@ -53,8 +87,8 @@ def parse_firmware_version(data: bytes) -> dict[str, int]:
         )
 
     # Validate echo
-    echo = struct.unpack(">H", data[0:2])[0]
-    if echo != 0x0043 and echo != 0x8043:
+    echo = unpack_command_code(data)
+    if echo != 0x0043 and echo != (0x0043 | RESPONSE_HIGH_BIT_FLAG):
         raise InvalidResponseError(
             f"Firmware version echo mismatch: expected 0x0043, got 0x{echo:04x}"
         )
@@ -85,7 +119,7 @@ def is_chunked_response(data: bytes) -> bool:
     # Chunked responses have chunk_id in bytes 2-4
     # Chunk 0 also has total_chunks field
     # Simple heuristic: if bytes 2-4 look like a small chunk ID, it's chunked
-    chunk_id = struct.unpack(">H", data[2:4])[0]
+    chunk_id = unpack_command_code(data, offset=2)
 
     # Chunk IDs should be reasonable (< 100 for config responses)
     return 0 <= chunk_id < 100
