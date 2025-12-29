@@ -126,8 +126,14 @@ class RefreshMode(IntEnum):
 class DitherMode(IntEnum):
     """Image dithering algorithms."""
     NONE = 0
-    BURKES = 1    # Burkes error diffusion
-    ORDERED = 2   # Bayer/ordered dithering
+    BURKES = 1
+    ORDERED = 2
+    FLOYD_STEINBERG = 3
+    ATKINSON = 4
+    STUCKI = 5
+    SIERRA = 6
+    SIERRA_LITE = 7
+    JARVIS_JUDICE_NINKE = 8
 
 
 class ICType(IntEnum):

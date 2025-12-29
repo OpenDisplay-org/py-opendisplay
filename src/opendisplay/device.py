@@ -326,8 +326,7 @@ class OpenDisplayDevice:
             image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
 
         # Apply dithering
-        dither_method = dither_mode.name.lower()
-        dithered = dither_image(image, self.color_scheme, method=dither_method)
+        dithered = dither_image(image, self.color_scheme, mode=dither_mode)
 
         # Encode to device format
         if self.color_scheme in (ColorScheme.BWR, ColorScheme.BWY):
