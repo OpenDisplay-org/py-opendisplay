@@ -196,7 +196,6 @@ class BLEConnection:
                 data,
                 response=True,  # Wait for write confirmation
             )
-            _LOGGER.debug("Wrote %d bytes to device", len(data))
         except Exception as e:
             raise BLEConnectionError(f"Write failed: {e}") from e
 

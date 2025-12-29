@@ -28,7 +28,10 @@ MANUFACTURER_ID = 0x2446  # 9286 decimal
 # Chunking constants
 CHUNK_SIZE = 230  # Maximum data bytes per chunk
 CONFIG_CHUNK_SIZE = 96  # TLV config chunk data size
-PIPELINE_CHUNKS = 3  # Number of chunks to send before waiting for ACK
+PIPELINE_CHUNKS = 1  # Wait for ACK after each chunk
+
+# Upload protocol constants
+MAX_COMPRESSED_SIZE = 50 * 1024  # 50KB - firmware buffer limit for compressed uploads
 
 
 def build_read_config_command() -> bytes:
@@ -49,39 +52,47 @@ def build_read_fw_version_command() -> bytes:
     return CommandCode.READ_FW_VERSION.to_bytes(2, byteorder='big')
 
 
-def build_direct_write_start_command(
-        image_data: bytes,
-        width: int,
-        height: int,
-        is_compressed: bool = True
+def build_direct_write_start_compressed(
+        uncompressed_size: int,
+        compressed_data: bytes
 ) -> bytes:
-    """Build command to start direct write image transfer.
+    """Build START command for compressed upload protocol.
+
+    This protocol sends ALL image data in the START command.
+    No 0x0071 DATA chunks are sent after this!
 
     Args:
-        image_data: Complete image data (compressed or raw)
-        width: Display width in pixels
-        height: Display height in pixels
-        is_compressed: Whether image_data is compressed (default: True)
+        uncompressed_size: Original uncompressed image size in bytes
+        compressed_data: Complete compressed image data
 
     Returns:
-        Command bytes: 0x0070 + size (4 bytes) + initial_data
+        Command bytes: 0x0070 + uncompressed_size (4 bytes) + ALL compressed_data
 
     Format:
-        [cmd:2][size:4][initial_data:variable]
+        [cmd:2][uncompressed_size:4][compressed_data:all]
         - cmd: 0x0070 (big-endian)
-        - size: Total image size in bytes (little-endian uint32)
-        - initial_data: First chunk of image data (fits in MTU)
+        - uncompressed_size: Original size before compression (little-endian uint32)
+        - compressed_data: Complete compressed image (device will decompress)
     """
     cmd = CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder='big')
-    size = len(image_data).to_bytes(4, byteorder='little')
+    size = uncompressed_size.to_bytes(4, byteorder='little')
+    return cmd + size + compressed_data  # ALL data in START!
 
-    # First packet: cmd (2) + size (4) = 6 bytes header
-    # MTU is typically 244, so we can send ~238 bytes of data in first packet
-    # But be conservative and match CHUNK_SIZE
-    initial_chunk_size = min(len(image_data), CHUNK_SIZE)
-    initial_data = image_data[:initial_chunk_size]
 
-    return cmd + size + initial_data
+def build_direct_write_start_uncompressed() -> bytes:
+    """Build START command for uncompressed upload protocol.
+
+    This protocol sends NO data in START - all data follows via 0x0071 chunks.
+
+    Returns:
+        Command bytes: 0x0070 (just the command, no data!)
+
+    Format:
+        [cmd:2]
+        - cmd: 0x0070 (big-endian)
+        - NO size, NO data - everything sent via 0x0071 DATA chunks
+    """
+    return CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder='big')
 
 
 def build_direct_write_data_command(chunk_data: bytes) -> bytes:

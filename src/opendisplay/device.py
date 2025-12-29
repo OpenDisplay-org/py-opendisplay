@@ -14,16 +14,18 @@ from .encoding import (
     encode_bitplanes,
     encode_image,
 )
-from .exceptions import ProtocolError
+from .exceptions import ProtocolError, BLETimeoutError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
 from .models.enums import ColorScheme, DitherMode, RefreshMode
 from .protocol import (
+    MAX_COMPRESSED_SIZE,
     ChunkAssembler,
     CommandCode,
     build_direct_write_data_command,
     build_direct_write_end_command,
-    build_direct_write_start_command,
+    build_direct_write_start_compressed,
+    build_direct_write_start_uncompressed,
     build_read_config_command,
     build_read_fw_version_command,
     parse_config_response,
@@ -306,56 +308,100 @@ class OpenDisplayDevice:
 
         _LOGGER.debug("Encoded image: %d bytes", len(image_data))
 
-        # Compress if enabled
+        # Choose upload protocol based on compression and size
         if compress:
-            image_data = compress_image_data(image_data, level=6)
-            _LOGGER.debug("Compressed: %d bytes", len(image_data))
+            compressed_data = compress_image_data(image_data, level=6)
+            _LOGGER.debug("Compressed: %d bytes", len(compressed_data))
 
-        # Upload via direct write protocol
-        await self._direct_write_upload(image_data, refresh_mode)
+            if len(compressed_data) < MAX_COMPRESSED_SIZE:
+                # Use compressed protocol - all data in START
+                _LOGGER.info("Using compressed upload protocol (size: %d bytes)", len(compressed_data))
+                await self._upload_compressed(compressed_data, len(image_data), refresh_mode)
+            else:
+                # Too big for compressed protocol - use uncompressed
+                _LOGGER.info("Compressed size exceeds %d bytes, using uncompressed protocol", MAX_COMPRESSED_SIZE)
+                await self._upload_uncompressed(image_data, refresh_mode)
+        else:
+            # User disabled compression - use uncompressed protocol
+            _LOGGER.info("Compression disabled, using uncompressed protocol")
+            await self._upload_uncompressed(image_data, refresh_mode)
 
         _LOGGER.info("Image upload complete")
 
-    async def _direct_write_upload(
+    async def _upload_compressed(
             self,
-            image_data: bytes,
+            compressed_data: bytes,
+            uncompressed_size: int,
             refresh_mode: RefreshMode,
     ) -> None:
-        """Upload image using direct write protocol (0x0070-0x0072).
+        """Upload using compressed protocol - all data in START command.
+
+        This protocol sends ALL image data in the START command (0x0070).
+        No 0x0071 DATA chunks are sent!
 
         Args:
-            image_data: Encoded (and optionally compressed) image data
+            compressed_data: Complete compressed image data
+            uncompressed_size: Original uncompressed size
             refresh_mode: Display refresh mode
-        """
-        from .protocol import CHUNK_SIZE, PIPELINE_CHUNKS
 
-        # 1. Send START command with first chunk
-        start_cmd = build_direct_write_start_command(
-            image_data,
-            self.width,
-            self.height,
-            is_compressed=True,
-        )
+        Raises:
+            ProtocolError: If upload fails
+        """
+        _LOGGER.debug("Starting compressed upload (%d bytes compressed, %d uncompressed)",
+                      len(compressed_data), uncompressed_size)
+
+        # Send START with ALL data
+        start_cmd = build_direct_write_start_compressed(uncompressed_size, compressed_data)
         await self._connection.write_command(start_cmd)
 
         # Wait for START ACK
         response = await self._connection.read_response(timeout=5.0)
         validate_ack_response(response, CommandCode.DIRECT_WRITE_START)
 
-        # Calculate how much data was sent in START command
-        # START format: [cmd:2][size:4][initial_data]
-        header_size = 6
-        initial_data_size = min(len(image_data), CHUNK_SIZE)
-        bytes_sent = initial_data_size
+        _LOGGER.debug("START ACK received, sending END command")
 
-        _LOGGER.debug(
-            "Sent START with %d bytes (header=%d, data=%d)",
-            len(start_cmd),
-            header_size,
-            initial_data_size,
-        )
+        # NO CHUNKS! Go straight to END
+        end_cmd = build_direct_write_end_command(refresh_mode.value)
+        await self._connection.write_command(end_cmd)
 
-        # 2. Send remaining data in chunks
+        # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
+        response = await self._connection.read_response(timeout=90.0)
+        validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
+
+        _LOGGER.debug("Compressed upload complete")
+
+    async def _upload_uncompressed(
+            self,
+            image_data: bytes,
+            refresh_mode: RefreshMode,
+    ) -> None:
+        """Upload using uncompressed protocol - START + chunks + END.
+
+        This protocol sends NO data in START - all data follows via 0x0071 chunks.
+
+        Args:
+            image_data: Uncompressed encoded image data
+            refresh_mode: Display refresh mode
+
+        Raises:
+            ProtocolError: If upload fails
+        """
+        from .protocol import CHUNK_SIZE, PIPELINE_CHUNKS
+
+        _LOGGER.debug("Starting uncompressed upload (%d bytes)", len(image_data))
+
+        # 1. Send START command (NO DATA!)
+        start_cmd = build_direct_write_start_uncompressed()
+        await self._connection.write_command(start_cmd)
+
+        # Wait for START ACK
+        response = await self._connection.read_response(timeout=5.0)
+        validate_ack_response(response, CommandCode.DIRECT_WRITE_START)
+
+        _LOGGER.debug("START ACK received, sending data chunks")
+
+        # 2. Send ALL data as chunks (starting from byte 0)
+        bytes_sent = 0
         chunks_sent = 0
 
         while bytes_sent < len(image_data):
@@ -371,28 +417,56 @@ class OpenDisplayDevice:
             bytes_sent += len(chunk_data)
             chunks_sent += 1
 
-            # Wait for ACK after every PIPELINE_CHUNKS chunks
-            if chunks_sent % PIPELINE_CHUNKS == 0 or bytes_sent >= len(image_data):
+            # Wait for response after every chunk (PIPELINE_CHUNKS=1)
+            try:
                 response = await self._connection.read_response(timeout=5.0)
-                validate_ack_response(response, CommandCode.DIRECT_WRITE_DATA)
+            except BLETimeoutError:
+                # Timeout on response - firmware might be doing display refresh
+                # This happens when the chunk completes directWriteTotalBytes
+                _LOGGER.info("No response after chunk %d (%.1f%%), waiting for device refresh...",
+                             chunks_sent, bytes_sent / len(image_data) * 100)
 
+                # Wait up to 90 seconds for the END response
+                response = await self._connection.read_response(timeout=90.0)
+
+            import struct
+            response_code = struct.unpack(">H", response[0:2])[0]
+
+            # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)
+            if response_code in (CommandCode.DIRECT_WRITE_DATA, CommandCode.DIRECT_WRITE_DATA | 0x8000):
+                # Normal DATA ACK (0x0071) - continue sending chunks
+                pass
+            elif response_code in (CommandCode.DIRECT_WRITE_END, CommandCode.DIRECT_WRITE_END | 0x8000):
+                # Firmware auto-triggered END (0x0072) after receiving all data
+                # This happens when last chunk completes directWriteTotalBytes
+                _LOGGER.info("Received END response after chunk %d - device auto-completed", chunks_sent)
+                # Note: 0x0072 is sent AFTER display refresh completes (waitforrefresh(60))
+                # So we're already done - no need to send our own 0x0072 END command!
+                return
+            else:
+                # Unexpected response
+                raise ProtocolError(f"Unexpected response: 0x{response_code:04x}")
+
+            # Log progress every 50 chunks to reduce spam
+            if chunks_sent % 50 == 0 or bytes_sent >= len(image_data):
                 _LOGGER.debug(
                     "Sent %d/%d bytes (%.1f%%)",
                     bytes_sent,
                     len(image_data),
                     bytes_sent / len(image_data) * 100,
-                    )
+                )
+
+        _LOGGER.debug("All data chunks sent (%d chunks total), sending END command", chunks_sent)
 
         # 3. Send END command to trigger refresh
         end_cmd = build_direct_write_end_command(refresh_mode.value)
         await self._connection.write_command(end_cmd)
 
-        # Wait for END ACK (longer timeout for decompression + display refresh)
-        # Large displays can take 15-20s to decompress and refresh
-        response = await self._connection.read_response(timeout=30.0)
+        # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
+        response = await self._connection.read_response(timeout=90.0)
         validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
 
-        _LOGGER.debug("Direct write complete")
+        _LOGGER.debug("Uncompressed upload complete")
 
     def _extract_capabilities_from_config(self) -> DeviceCapabilities:
         """Extract DeviceCapabilities from GlobalConfig.
