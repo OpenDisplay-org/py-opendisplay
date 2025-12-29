@@ -8,8 +8,24 @@ version = "0.1.0"
 description = "Python library for OpenDisplay BLE e-paper displays"
 readme = "README.md"
 license = "MIT"
-authors = [{name = "g4bri3lDev", email = "admin@g4bri3l.de"}]
 requires-python = ">=3.11"
+authors = [
+    {name = "g4bri3lDev", email = "admin@g4bri3l.de"}
+]
+
+keywords = ["opendisplay", "e-paper", "eink", "ble", "bluetooth", "display"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware",
+]
+
 
 dependencies = [
     "bleak>=1.0.1",
@@ -18,11 +34,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.8.0"
+
+]
+
+property = [
+    "hypothesis>=6.148.8"
+]
+
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21",
-    "pytest-cov>=4.0",
-    "ruff>=0.1",
+    "mypy>=1.19.1",
+    "ruff>=0.14.10"
 ]
 
 [project.urls]
@@ -32,10 +58,19 @@ Repository = "https://github.com/OpenDisplay-org/py-opendisplay"
 [tool.hatch.build.targets.wheel]
 packages = ["src/opendisplay"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"

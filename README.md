@@ -21,7 +21,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     await device.upload_image(image)
 ```
 
-Option 2: Using Device Name (Auto-Discovery)
+### Option 2: Using Device Name (Auto-Discovery)
 
 ```python
 from opendisplay import OpenDisplayDevice, discover_devices
@@ -33,8 +33,8 @@ print(devices)  # {"OpenDisplay-A123": "AA:BB:CC:DD:EE:FF", ...}
 
 # Connect using name
 async with OpenDisplayDevice(device_name="OpenDisplay-A123") as device:
-    image = Image.open("photo.jpg")
-    await device.upload_image(image)
+  image = Image.open("photo.jpg")
+  await device.upload_image(image)
 ```
 
 Image Resizing
