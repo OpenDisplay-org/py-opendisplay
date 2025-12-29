@@ -35,7 +35,7 @@ from .protocol import (
     parse_firmware_version,
     validate_ack_response,
 )
-from .protocol.responses import is_chunked_response, strip_command_echo
+from .protocol.responses import check_response_type, is_chunked_response, strip_command_echo
 from .transport import BLEConnection
 
 if TYPE_CHECKING:
@@ -146,7 +146,7 @@ class OpenDisplayDevice:
         return self._capabilities.rotation
 
     async def interrogate(self) -> GlobalConfig:
-        """Read device configuration via BLE.
+        """Read device configuration from device.
 
         Returns:
             GlobalConfig with complete device configuration
@@ -162,34 +162,28 @@ class OpenDisplayDevice:
 
         # Read first chunk
         response = await self._connection.read_response(timeout=10.0)
+        chunk_data = strip_command_echo(response, CommandCode.READ_CONFIG)
 
-        # Strip echo and parse chunk 0 header
-        chunk_data = self._strip_echo(response, CommandCode.READ_CONFIG)
+        # Parse first chunk header
         chunk_num = int.from_bytes(chunk_data[0:2], "little")
         total_length = int.from_bytes(chunk_data[2:4], "little")
-
-        _LOGGER.debug(
-            "Chunk %d: total_length=%d bytes",
-            chunk_num,
-            total_length,
-        )
-
-        # Extract TLV data from chunk 0
         tlv_data = bytearray(chunk_data[4:])
 
-        # Collect remaining chunks
+        _LOGGER.debug("First chunk: %d bytes, total length: %d", len(chunk_data), total_length)
+
+        # Read remaining chunks
         while len(tlv_data) < total_length:
+            next_response = await self._connection.read_response(timeout=2.0)
+            next_chunk_data = strip_command_echo(next_response, CommandCode.READ_CONFIG)
+
+            # Skip chunk number field (2 bytes) and append data
+            tlv_data.extend(next_chunk_data[2:])
+
             _LOGGER.debug(
-                "Waiting for next chunk (have %d/%d bytes)...",
+                "Received chunk, total: %d/%d bytes",
                 len(tlv_data),
                 total_length,
             )
-
-            next_response = await self._connection.read_response(timeout=2.0)
-            next_chunk_data = self._strip_echo(next_response, CommandCode.READ_CONFIG)
-
-            # Skip 2-byte chunk number, append rest
-            tlv_data.extend(next_chunk_data[2:])
 
         _LOGGER.info("Received complete TLV data: %d bytes", len(tlv_data))
 
@@ -206,23 +200,6 @@ class OpenDisplayDevice:
         )
 
         return self._config
-
-    def _strip_echo(self, data: bytes, expected_cmd: CommandCode) -> bytes:
-        """Strip command echo from response.
-
-        Args:
-            data: Response data from device
-            expected_cmd: Expected command echo
-
-        Returns:
-            Data with echo stripped (if present)
-        """
-        if len(data) >= 2:
-            echo = struct.unpack(">H", data[0:2])[0]
-            if echo == expected_cmd or echo == (expected_cmd | 0x8000):
-                return data[2:]
-        return data  # Fallback: return as-is
-
 
     async def read_firmware_version(self) -> dict[str, int]:
         """Read firmware version from device.
@@ -372,6 +349,88 @@ class OpenDisplayDevice:
 
         _LOGGER.debug("Compressed upload complete")
 
+    async def _send_data_chunks(self, image_data: bytes) -> bool:
+        """Send image data chunks with ACK handling.
+
+        Sends image data in chunks via 0x0071 DATA commands. Handles:
+        - Timeout recovery when firmware starts display refresh
+        - Auto-completion detection (firmware sends 0x0072 END early)
+        - Progress logging
+
+        Args:
+            image_data: Uncompressed encoded image data
+
+        Returns:
+            True if device auto-completed (sent 0x0072 END early)
+            False if all chunks sent normally (caller should send END)
+
+        Raises:
+            ProtocolError: If unexpected response received
+            BLETimeoutError: If no response within timeout
+        """
+        bytes_sent = 0
+        chunks_sent = 0
+
+        while bytes_sent < len(image_data):
+            # Get next chunk
+            chunk_start = bytes_sent
+            chunk_end = min(chunk_start + CHUNK_SIZE, len(image_data))
+            chunk_data = image_data[chunk_start:chunk_end]
+
+            # Send DATA command
+            data_cmd = build_direct_write_data_command(chunk_data)
+            await self._connection.write_command(data_cmd)
+
+            bytes_sent += len(chunk_data)
+            chunks_sent += 1
+
+            # Wait for response after every chunk (PIPELINE_CHUNKS=1)
+            try:
+                response = await self._connection.read_response(timeout=5.0)
+            except BLETimeoutError:
+                # Timeout on response - firmware might be doing display refresh
+                # This happens when the chunk completes directWriteTotalBytes
+                _LOGGER.info(
+                    "No response after chunk %d (%.1f%%), waiting for device refresh...",
+                    chunks_sent,
+                    bytes_sent / len(image_data) * 100,
+                )
+
+                # Wait up to 90 seconds for the END response
+                response = await self._connection.read_response(timeout=90.0)
+
+            # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)
+            command, is_ack = check_response_type(response)
+
+            if command == CommandCode.DIRECT_WRITE_DATA:
+                # Normal DATA ACK (0x0071) - continue sending chunks
+                pass
+            elif command == CommandCode.DIRECT_WRITE_END:
+                # Firmware auto-triggered END (0x0072) after receiving all data
+                # This happens when last chunk completes directWriteTotalBytes
+                _LOGGER.info(
+                    "Received END response after chunk %d - device auto-completed",
+                    chunks_sent,
+                )
+                # Note: 0x0072 is sent AFTER display refresh completes (waitforrefresh(60))
+                # So we're already done - no need to send our own 0x0072 END command!
+                return True  # Auto-completed
+            else:
+                # Unexpected response
+                raise ProtocolError(f"Unexpected response: {command.name} (0x{command:04x})")
+
+            # Log progress every 50 chunks to reduce spam
+            if chunks_sent % 50 == 0 or bytes_sent >= len(image_data):
+                _LOGGER.debug(
+                    "Sent %d/%d bytes (%.1f%%)",
+                    bytes_sent,
+                    len(image_data),
+                    bytes_sent / len(image_data) * 100,
+                )
+
+        _LOGGER.debug("All data chunks sent (%d chunks total)", chunks_sent)
+        return False  # Normal completion, caller should send END
+
     async def _upload_uncompressed(
             self,
             image_data: bytes,
@@ -400,70 +459,18 @@ class OpenDisplayDevice:
 
         _LOGGER.debug("START ACK received, sending data chunks")
 
-        # 2. Send ALL data as chunks (starting from byte 0)
-        bytes_sent = 0
-        chunks_sent = 0
+        # 2. Send all data chunks
+        auto_completed = await self._send_data_chunks(image_data)
 
-        while bytes_sent < len(image_data):
-            # Get next chunk
-            chunk_start = bytes_sent
-            chunk_end = min(chunk_start + CHUNK_SIZE, len(image_data))
-            chunk_data = image_data[chunk_start:chunk_end]
+        # 3. Send END command (only if device didn't auto-complete)
+        if not auto_completed:
+            _LOGGER.debug("Sending END command to trigger refresh")
+            end_cmd = build_direct_write_end_command(refresh_mode.value)
+            await self._connection.write_command(end_cmd)
 
-            # Send DATA command
-            data_cmd = build_direct_write_data_command(chunk_data)
-            await self._connection.write_command(data_cmd)
-
-            bytes_sent += len(chunk_data)
-            chunks_sent += 1
-
-            # Wait for response after every chunk (PIPELINE_CHUNKS=1)
-            try:
-                response = await self._connection.read_response(timeout=5.0)
-            except BLETimeoutError:
-                # Timeout on response - firmware might be doing display refresh
-                # This happens when the chunk completes directWriteTotalBytes
-                _LOGGER.info("No response after chunk %d (%.1f%%), waiting for device refresh...",
-                             chunks_sent, bytes_sent / len(image_data) * 100)
-
-                # Wait up to 90 seconds for the END response
-                response = await self._connection.read_response(timeout=90.0)
-
-            response_code = struct.unpack(">H", response[0:2])[0]
-
-            # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)
-            if response_code in (CommandCode.DIRECT_WRITE_DATA, CommandCode.DIRECT_WRITE_DATA | 0x8000):
-                # Normal DATA ACK (0x0071) - continue sending chunks
-                pass
-            elif response_code in (CommandCode.DIRECT_WRITE_END, CommandCode.DIRECT_WRITE_END | 0x8000):
-                # Firmware auto-triggered END (0x0072) after receiving all data
-                # This happens when last chunk completes directWriteTotalBytes
-                _LOGGER.info("Received END response after chunk %d - device auto-completed", chunks_sent)
-                # Note: 0x0072 is sent AFTER display refresh completes (waitforrefresh(60))
-                # So we're already done - no need to send our own 0x0072 END command!
-                return
-            else:
-                # Unexpected response
-                raise ProtocolError(f"Unexpected response: 0x{response_code:04x}")
-
-            # Log progress every 50 chunks to reduce spam
-            if chunks_sent % 50 == 0 or bytes_sent >= len(image_data):
-                _LOGGER.debug(
-                    "Sent %d/%d bytes (%.1f%%)",
-                    bytes_sent,
-                    len(image_data),
-                    bytes_sent / len(image_data) * 100,
-                )
-
-        _LOGGER.debug("All data chunks sent (%d chunks total), sending END command", chunks_sent)
-
-        # 3. Send END command to trigger refresh
-        end_cmd = build_direct_write_end_command(refresh_mode.value)
-        await self._connection.write_command(end_cmd)
-
-        # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
-        response = await self._connection.read_response(timeout=90.0)
-        validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
+            # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
+            response = await self._connection.read_response(timeout=90.0)
+            validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
 
         _LOGGER.debug("Uncompressed upload complete")
 

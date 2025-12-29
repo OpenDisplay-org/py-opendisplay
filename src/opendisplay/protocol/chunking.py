@@ -5,6 +5,7 @@ from __future__ import annotations
 import struct
 
 from ..exceptions import ProtocolError
+from .commands import RESPONSE_HIGH_BIT_FLAG
 
 
 class ChunkAssembler:
@@ -42,11 +43,12 @@ class ChunkAssembler:
             raise ProtocolError(f"Chunk too short: {len(data)} bytes (need at least 6)")
 
         # Parse header: [echo:2][chunk_id:2][total_chunks:2 (chunk 0 only)]
-        echo_cmd = struct.unpack(">H", data[0:2])[0]  # Big-endian
-        chunk_id = struct.unpack(">H", data[2:4])[0]  # Big-endian
+        echo_cmd = struct.unpack(">H", data[0:2])[0]  # Big-endian (command codes)
+        chunk_id = struct.unpack("<H", data[2:4])[0]  # Little-endian (chunk metadata)
 
-        # Verify echo matches expected command
-        if echo_cmd != self.expected_command:
+        # Verify echo matches expected command (with or without high-bit flag)
+        valid_echoes = {self.expected_command, self.expected_command | RESPONSE_HIGH_BIT_FLAG}
+        if echo_cmd not in valid_echoes:
             raise ProtocolError(
                 f"Command echo mismatch: expected 0x{self.expected_command:04x}, "
                 f"got 0x{echo_cmd:04x}"
@@ -57,7 +59,7 @@ class ChunkAssembler:
             if len(data) < 8:
                 raise ProtocolError(f"Chunk 0 too short: {len(data)} bytes (need at least 8)")
 
-            self.total_chunks = struct.unpack(">H", data[4:6])[0]  # Big-endian
+            self.total_chunks = struct.unpack("<H", data[4:6])[0]  # Little-endian
             chunk_data = data[6:]  # Data starts after total_chunks
         else:
             chunk_data = data[4:]  # Data starts after chunk_id

@@ -41,6 +41,23 @@ def strip_command_echo(data: bytes, expected_cmd: CommandCode) -> bytes:
     return data
 
 
+def check_response_type(response: bytes) -> tuple[CommandCode, bool]:
+    """Check response type and whether it's an ACK.
+
+    Args:
+        response: Raw response data from device
+
+    Returns:
+        Tuple of (command_code, is_ack)
+        - command_code: The command code (without high bit)
+        - is_ack: True if response has high bit set (RESPONSE_HIGH_BIT_FLAG)
+    """
+    code = unpack_command_code(response)
+    is_ack = bool(code & RESPONSE_HIGH_BIT_FLAG)
+    command = CommandCode(code & ~RESPONSE_HIGH_BIT_FLAG)
+    return command, is_ack
+
+
 def validate_ack_response(data: bytes, expected_command: int) -> None:
     """Validate ACK response from device.
 
