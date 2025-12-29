@@ -41,7 +41,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         run: uv sync
 
-      - name: Run tests
+      # - name: Run tests
       #   if: ${{ steps.release.outputs.release_created }}
       #   run: uv run pytest tests/ -v
 
