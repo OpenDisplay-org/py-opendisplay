@@ -2,6 +2,13 @@
 
 ## 0.1.0 (2025-12-29)
 
+
+### Features
+
+* add discovery function ([2760ef9](https://github.com/OpenDisplay-org/py-opendisplay/commit/2760ef913440b8689bdc6c39d09050fc5f757b64))
+
+## 0.1.0 (2025-12-29)
+
 ### Features
 
 * Initial release of py-opendisplay
