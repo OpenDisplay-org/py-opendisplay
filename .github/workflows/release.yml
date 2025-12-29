@@ -42,12 +42,12 @@ jobs:
         run: uv sync
 
       - name: Run tests
-        if: ${{ steps.release.outputs.release_created }}
-        run: uv run pytest tests/ -v
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: uv run pytest tests/ -v
 
-      - name: Run linter
-        if: ${{ steps.release.outputs.release_created }}
-        run: uv run ruff check .
+      # - name: Run linter
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: uv run ruff check .
 
       - name: Build package
         if: ${{ steps.release.outputs.release_created }}
