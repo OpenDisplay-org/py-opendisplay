@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.1.1...v0.2.0) (2025-12-29)
+
+
+### Features
+
+* add more dithering algorithms ([1b2fc6a](https://github.com/OpenDisplay-org/py-opendisplay/commit/1b2fc6aeef3ef6c3b81e0c23855d38a61e00a62b))
+
 ## [0.1.1](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.1.0...v0.1.1) (2025-12-29)
 
 
