@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import struct
 
-from ..exceptions import InvalidResponseError, ProtocolError
+from ..exceptions import InvalidResponseError
 from .commands import RESPONSE_HIGH_BIT_FLAG, CommandCode
 
 
@@ -117,26 +117,3 @@ def parse_firmware_version(data: bytes) -> dict[str, int]:
         "major": major,
         "minor": minor,
     }
-
-
-def is_chunked_response(data: bytes) -> bool:
-    """Check if response is a multi-chunk response.
-
-    Chunked responses have format: [echo:2][chunk_id:2][data...]
-
-    Args:
-        data: Raw response data
-
-    Returns:
-        True if this appears to be a chunked response
-    """
-    if len(data) < 6:
-        return False
-
-    # Chunked responses have chunk_id in bytes 2-4
-    # Chunk 0 also has total_chunks field
-    # Simple heuristic: if bytes 2-4 look like a small chunk ID, it's chunked
-    chunk_id = unpack_command_code(data, offset=2)
-
-    # Chunk IDs should be reasonable (< 100 for config responses)
-    return 0 <= chunk_id < 100

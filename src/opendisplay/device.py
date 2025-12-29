@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import struct
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -11,7 +10,6 @@ from PIL import Image
 from .encoding import (
     compress_image_data,
     dither_image,
-    encode_1bpp,
     encode_bitplanes,
     encode_image,
 )
@@ -22,8 +20,6 @@ from .models.enums import ColorScheme, DitherMode, RefreshMode
 from .protocol import (
     CHUNK_SIZE,
     MAX_COMPRESSED_SIZE,
-    PIPELINE_CHUNKS,
-    ChunkAssembler,
     CommandCode,
     build_direct_write_data_command,
     build_direct_write_end_command,
@@ -35,7 +31,7 @@ from .protocol import (
     parse_firmware_version,
     validate_ack_response,
 )
-from .protocol.responses import check_response_type, is_chunked_response, strip_command_echo
+from .protocol.responses import check_response_type, strip_command_echo
 from .transport import BLEConnection
 
 if TYPE_CHECKING:
@@ -63,6 +59,12 @@ class OpenDisplayDevice:
         async with OpenDisplayDevice(mac, capabilities=caps) as device:
             await device.upload_image(image)
     """
+
+    # BLE operation timeouts (seconds)
+    TIMEOUT_FIRST_CHUNK = 10.0  # First chunk may take longer
+    TIMEOUT_CHUNK = 2.0          # Subsequent chunks
+    TIMEOUT_ACK = 5.0            # Command acknowledgments
+    TIMEOUT_REFRESH = 90.0       # Display refresh (firmware spec: up to 60s)
 
     def __init__(
             self,
@@ -107,6 +109,21 @@ class OpenDisplayDevice:
         """Disconnect from device."""
         await self._connection.disconnect()
 
+    def _ensure_capabilities(self) -> DeviceCapabilities:
+        """Ensure device capabilities are available.
+
+        Returns:
+            DeviceCapabilities instance
+
+        Raises:
+            RuntimeError: If device not interrogated/configured
+        """
+        if not self._capabilities:
+            raise RuntimeError(
+                "Device capabilities unknown - interrogate first or provide config/capabilities"
+            )
+        return self._capabilities
+
     @property
     def config(self) -> GlobalConfig | None:
         """Get full device configuration (if interrogated)."""
@@ -120,30 +137,22 @@ class OpenDisplayDevice:
     @property
     def width(self) -> int:
         """Get display width in pixels."""
-        if not self._capabilities:
-            raise RuntimeError("Device not interrogated - width unknown")
-        return self._capabilities.width
+        return self._ensure_capabilities().width
 
     @property
     def height(self) -> int:
         """Get display height in pixels."""
-        if not self._capabilities:
-            raise RuntimeError("Device not interrogated - height unknown")
-        return self._capabilities.height
+        return self._ensure_capabilities().height
 
     @property
     def color_scheme(self) -> ColorScheme:
         """Get display color scheme."""
-        if not self._capabilities:
-            raise RuntimeError("Device not interrogated - color scheme unknown")
-        return self._capabilities.color_scheme
+        return self._ensure_capabilities().color_scheme
 
     @property
     def rotation(self) -> int:
         """Get display rotation in degrees."""
-        if not self._capabilities:
-            raise RuntimeError("Device not interrogated - rotation unknown")
-        return self._capabilities.rotation
+        return self._ensure_capabilities().rotation
 
     async def interrogate(self) -> GlobalConfig:
         """Read device configuration from device.
@@ -161,11 +170,10 @@ class OpenDisplayDevice:
         await self._connection.write_command(cmd)
 
         # Read first chunk
-        response = await self._connection.read_response(timeout=10.0)
+        response = await self._connection.read_response(timeout=self.TIMEOUT_FIRST_CHUNK)
         chunk_data = strip_command_echo(response, CommandCode.READ_CONFIG)
 
         # Parse first chunk header
-        chunk_num = int.from_bytes(chunk_data[0:2], "little")
         total_length = int.from_bytes(chunk_data[2:4], "little")
         tlv_data = bytearray(chunk_data[4:])
 
@@ -173,7 +181,7 @@ class OpenDisplayDevice:
 
         # Read remaining chunks
         while len(tlv_data) < total_length:
-            next_response = await self._connection.read_response(timeout=2.0)
+            next_response = await self._connection.read_response(timeout=self.TIMEOUT_CHUNK)
             next_chunk_data = strip_command_echo(next_response, CommandCode.READ_CONFIG)
 
             # Skip chunk number field (2 bytes) and append data
@@ -214,7 +222,7 @@ class OpenDisplayDevice:
         await self._connection.write_command(cmd)
 
         # Read response
-        response = await self._connection.read_response(timeout=5.0)
+        response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
 
         # Parse version
         self._fw_version = parse_firmware_version(response)
@@ -226,6 +234,46 @@ class OpenDisplayDevice:
         )
 
         return self._fw_version
+
+    def _prepare_image(
+        self,
+        image: Image.Image,
+        dither_mode: DitherMode,
+        compress: bool,
+    ) -> tuple[bytes, bytes | None]:
+        """Prepare image for upload.
+
+        Handles resizing, dithering, encoding, and optional compression.
+
+        Args:
+            image: PIL Image to prepare
+            dither_mode: Dithering algorithm to use
+            compress: Whether to compress the image data
+
+        Returns:
+            Tuple of (uncompressed_data, compressed_data or None)
+        """
+        # Resize image to display dimensions
+        if image.size != (self.width, self.height):
+            image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+
+        # Apply dithering
+        dither_method = dither_mode.name.lower()
+        dithered = dither_image(image, self.color_scheme, method=dither_method)
+
+        # Encode to device format
+        if self.color_scheme in (ColorScheme.BWR, ColorScheme.BWY):
+            plane1, plane2 = encode_bitplanes(dithered, self.color_scheme)
+            image_data = plane1 + plane2
+        else:
+            image_data = encode_image(dithered, self.color_scheme)
+
+        # Optionally compress
+        compressed_data = None
+        if compress:
+            compressed_data = compress_image_data(image_data, level=6)
+
+        return image_data, compressed_data
 
     async def upload_image(
             self,
@@ -266,88 +314,73 @@ class OpenDisplayDevice:
             self.color_scheme.name,
         )
 
-        # Resize image to display dimensions
-        if image.size != (self.width, self.height):
-            _LOGGER.debug("Resizing image from %s to %s", image.size, (self.width, self.height))
-            image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+        # Prepare image (resize, dither, encode, compress)
+        image_data, compressed_data = self._prepare_image(image, dither_mode, compress)
 
-        # Apply dithering
-        dither_method = dither_mode.name.lower()
-        dithered = dither_image(image, self.color_scheme, method=dither_method)
-
-        # Encode to device format
-        if self.color_scheme in (ColorScheme.BWR, ColorScheme.BWY):
-            # Bitplane encoding for 3-color displays
-            plane1, plane2 = encode_bitplanes(dithered, self.color_scheme)
-            # Combine planes for direct write
-            image_data = plane1 + plane2
+        # Choose protocol based on compression and size
+        if compress and compressed_data and len(compressed_data) < MAX_COMPRESSED_SIZE:
+            _LOGGER.info("Using compressed upload protocol (size: %d bytes)", len(compressed_data))
+            await self._execute_upload(
+                image_data,
+                refresh_mode,
+                use_compression=True,
+                compressed_data=compressed_data,
+                uncompressed_size=len(image_data),
+            )
         else:
-            # Standard encoding (1bpp, 2bpp, 4bpp)
-            image_data = encode_image(dithered, self.color_scheme)
-
-        _LOGGER.debug("Encoded image: %d bytes", len(image_data))
-
-        # Choose upload protocol based on compression and size
-        if compress:
-            compressed_data = compress_image_data(image_data, level=6)
-            _LOGGER.debug("Compressed: %d bytes", len(compressed_data))
-
-            if len(compressed_data) < MAX_COMPRESSED_SIZE:
-                # Use compressed protocol - all data in START
-                _LOGGER.info("Using compressed upload protocol (size: %d bytes)", len(compressed_data))
-                await self._upload_compressed(compressed_data, len(image_data), refresh_mode)
-            else:
-                # Too big for compressed protocol - use uncompressed
+            if compress and compressed_data:
                 _LOGGER.info("Compressed size exceeds %d bytes, using uncompressed protocol", MAX_COMPRESSED_SIZE)
-                await self._upload_uncompressed(image_data, refresh_mode)
-        else:
-            # User disabled compression - use uncompressed protocol
-            _LOGGER.info("Compression disabled, using uncompressed protocol")
-            await self._upload_uncompressed(image_data, refresh_mode)
+            else:
+                _LOGGER.info("Compression disabled, using uncompressed protocol")
+            await self._execute_upload(image_data, refresh_mode, use_compression=False)
 
         _LOGGER.info("Image upload complete")
 
-    async def _upload_compressed(
-            self,
-            compressed_data: bytes,
-            uncompressed_size: int,
-            refresh_mode: RefreshMode,
+    async def _execute_upload(
+        self,
+        image_data: bytes,
+        refresh_mode: RefreshMode,
+        use_compression: bool = False,
+        compressed_data: bytes | None = None,
+        uncompressed_size: int | None = None,
     ) -> None:
-        """Upload using compressed protocol - all data in START command.
-
-        This protocol sends ALL image data in the START command (0x0070).
-        No 0x0071 DATA chunks are sent!
+        """Execute image upload using compressed or uncompressed protocol.
 
         Args:
-            compressed_data: Complete compressed image data
-            uncompressed_size: Original uncompressed size
+            image_data: Raw uncompressed image data (always needed for uncompressed)
             refresh_mode: Display refresh mode
+            use_compression: True to use compressed protocol
+            compressed_data: Compressed data (required if use_compression=True)
+            uncompressed_size: Original size (required if use_compression=True)
 
         Raises:
             ProtocolError: If upload fails
         """
-        _LOGGER.debug("Starting compressed upload (%d bytes compressed, %d uncompressed)",
-                      len(compressed_data), uncompressed_size)
+        # 1. Send START command (different for each protocol)
+        if use_compression:
+            start_cmd = build_direct_write_start_compressed(uncompressed_size, compressed_data)
+        else:
+            start_cmd = build_direct_write_start_uncompressed()
 
-        # Send START with ALL data
-        start_cmd = build_direct_write_start_compressed(uncompressed_size, compressed_data)
         await self._connection.write_command(start_cmd)
 
-        # Wait for START ACK
-        response = await self._connection.read_response(timeout=5.0)
+        # 2. Wait for START ACK (identical for both protocols)
+        response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
         validate_ack_response(response, CommandCode.DIRECT_WRITE_START)
 
-        _LOGGER.debug("START ACK received, sending END command")
+        # 3. Send data chunks (only for uncompressed protocol)
+        auto_completed = False
+        if not use_compression:
+            auto_completed = await self._send_data_chunks(image_data)
 
-        # NO CHUNKS! Go straight to END
-        end_cmd = build_direct_write_end_command(refresh_mode.value)
-        await self._connection.write_command(end_cmd)
+        # 4. Send END command if needed (identical for both protocols)
+        if not auto_completed:
+            end_cmd = build_direct_write_end_command(refresh_mode.value)
+            await self._connection.write_command(end_cmd)
 
-        # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
-        response = await self._connection.read_response(timeout=90.0)
-        validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
-
-        _LOGGER.debug("Compressed upload complete")
+            # Wait for END ACK (90s timeout for display refresh)
+            response = await self._connection.read_response(timeout=self.TIMEOUT_REFRESH)
+            validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
 
     async def _send_data_chunks(self, image_data: bytes) -> bool:
         """Send image data chunks with ACK handling.
@@ -386,7 +419,7 @@ class OpenDisplayDevice:
 
             # Wait for response after every chunk (PIPELINE_CHUNKS=1)
             try:
-                response = await self._connection.read_response(timeout=5.0)
+                response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
             except BLETimeoutError:
                 # Timeout on response - firmware might be doing display refresh
                 # This happens when the chunk completes directWriteTotalBytes
@@ -397,7 +430,7 @@ class OpenDisplayDevice:
                 )
 
                 # Wait up to 90 seconds for the END response
-                response = await self._connection.read_response(timeout=90.0)
+                response = await self._connection.read_response(timeout=self.TIMEOUT_REFRESH)
 
             # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)
             command, is_ack = check_response_type(response)
@@ -430,49 +463,6 @@ class OpenDisplayDevice:
 
         _LOGGER.debug("All data chunks sent (%d chunks total)", chunks_sent)
         return False  # Normal completion, caller should send END
-
-    async def _upload_uncompressed(
-            self,
-            image_data: bytes,
-            refresh_mode: RefreshMode,
-    ) -> None:
-        """Upload using uncompressed protocol - START + chunks + END.
-
-        This protocol sends NO data in START - all data follows via 0x0071 chunks.
-
-        Args:
-            image_data: Uncompressed encoded image data
-            refresh_mode: Display refresh mode
-
-        Raises:
-            ProtocolError: If upload fails
-        """
-        _LOGGER.debug("Starting uncompressed upload (%d bytes)", len(image_data))
-
-        # 1. Send START command (NO DATA!)
-        start_cmd = build_direct_write_start_uncompressed()
-        await self._connection.write_command(start_cmd)
-
-        # Wait for START ACK
-        response = await self._connection.read_response(timeout=5.0)
-        validate_ack_response(response, CommandCode.DIRECT_WRITE_START)
-
-        _LOGGER.debug("START ACK received, sending data chunks")
-
-        # 2. Send all data chunks
-        auto_completed = await self._send_data_chunks(image_data)
-
-        # 3. Send END command (only if device didn't auto-complete)
-        if not auto_completed:
-            _LOGGER.debug("Sending END command to trigger refresh")
-            end_cmd = build_direct_write_end_command(refresh_mode.value)
-            await self._connection.write_command(end_cmd)
-
-            # Wait for END ACK (90s timeout: firmware can take up to 60s for display refresh)
-            response = await self._connection.read_response(timeout=90.0)
-            validate_ack_response(response, CommandCode.DIRECT_WRITE_END)
-
-        _LOGGER.debug("Uncompressed upload complete")
 
     def _extract_capabilities_from_config(self) -> DeviceCapabilities:
         """Extract DeviceCapabilities from GlobalConfig.

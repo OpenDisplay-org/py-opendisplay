@@ -1,9 +1,7 @@
 """BLE protocol implementation."""
 
-from .chunking import ChunkAssembler
 from .commands import (
     CHUNK_SIZE,
-    CONFIG_CHUNK_SIZE,
     MANUFACTURER_ID,
     MAX_COMPRESSED_SIZE,
     PIPELINE_CHUNKS,
@@ -16,9 +14,8 @@ from .commands import (
     build_read_config_command,
     build_read_fw_version_command,
 )
-from .config_parser import parse_config_response, parse_tlv_config
+from .config_parser import parse_config_response
 from .responses import (
-    is_chunked_response,
     parse_firmware_version,
     validate_ack_response,
 )
@@ -28,7 +25,6 @@ __all__ = [
     "SERVICE_UUID",
     "MANUFACTURER_ID",
     "CHUNK_SIZE",
-    "CONFIG_CHUNK_SIZE",
     "PIPELINE_CHUNKS",
     "MAX_COMPRESSED_SIZE",
     "build_read_config_command",
@@ -37,10 +33,7 @@ __all__ = [
     "build_direct_write_start_uncompressed",
     "build_direct_write_data_command",
     "build_direct_write_end_command",
-    "ChunkAssembler",
     "parse_config_response",
-    "parse_tlv_config",
     "validate_ack_response",
     "parse_firmware_version",
-    "is_chunked_response",
 ]
