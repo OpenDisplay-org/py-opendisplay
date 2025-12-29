@@ -37,11 +37,11 @@ async with OpenDisplayDevice(device_name="OpenDisplay-A123") as device:
   await device.upload_image(image)
 ```
 
-Image Resizing
+## Image Resizing
 
 Images are automatically resized to match the display dimensions. A warning is logged if resizing occurs:
 
-`WARNING:opendisplay.device:Resizing image from 1920x1080 to 296x128` (device display size)
+- WARNING:opendisplay.device:Resizing image from 1920x1080 to 296x128
 
 For best results, resize images to the exact display dimensions before uploading.
 
@@ -77,14 +77,136 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
         refresh_mode=RefreshMode.FULL
     )
 ```
-Comparing Dithering Modes
+### Comparing Dithering Modes
 
-To preview how different dithering algorithms will look on your e-paper display, use the https://img2lcd.com/ online tool. Upload your image and compare the visual results of different dithering algorithms before choosing one for your application.
+To preview how different dithering algorithms will look on your e-paper display, use the **[img2lcd.com](https://img2lcd.com/)** online tool.
+Upload your image and compare the visual results before choosing an algorithm.
 
-Quality vs Speed Tradeoff:
-- Fastest: none, ordered, sierra-lite
-- Balanced: burkes, floyd-steinberg, sierra
-- Highest Quality: atkinson, stucki, jarvis-judice-ninke
+**Quality vs Speed Tradeoff:**
+
+| Category | Algorithms |
+|--------|------------|
+| Fastest / Lowest Cost | `none`, `ordered`, `sierra-lite` |
+| Best Cost-to-Quality | `floyd-steinberg`, `burkes`, `sierra` |
+| Heavy / Rarely Worth It | `stucki`, `jarvis-judice-ninke` |
+| Stylized / High Contrast | `atkinson` |
+
+## Refresh Modes
+
+Control how the display updates when uploading images:
+
+```python
+from opendisplay import RefreshMode
+
+await device.upload_image(
+    image,
+    refresh_mode=RefreshMode.FULL  # Options: FULL, FAST, PARTIAL, PARTIAL2
+)
+```
+
+### Available Modes
+
+| Mode | Description |
+|---|---|
+| `RefreshMode.FULL` | Full display refresh \(default\). Cleanest image quality; eliminates ghosting; slower \(~5–15 seconds\). |
+| `RefreshMode.FAST` | Fast partial refresh. Quicker updates; may show slight ghosting. |
+| `RefreshMode.PARTIAL` | Partial refresh mode 2. |
+| `RefreshMode.PARTIAL2` | Partial refresh mode 3. |
+
+Note: Partial refresh support varies by display hardware. Check [device capabilities](https://opendisplay.org/firmware/seeed_display_compatibility.html) for supported modes.
+
+## Advanced Features
+
+### Device Interrogation
+
+Query the complete device configuration including hardware specs, sensors, and capabilities:
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Automatic interrogation on first connect
+    config = device.config
+    
+    print(f"IC Type: {config.system.ic_type_enum.name}")
+    print(f"Displays: {len(config.displays)}")
+    print(f"Sensors: {len(config.sensors)}")
+```
+
+Skip interrogation if the device info is already cached:
+```python
+
+# Provide cached config to skip interrogation
+device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", config=cached_config)
+
+# Or provide minimal capabilities
+capabilities = DeviceCapabilities(296, 128, ColorScheme.BWR, 0)
+device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", capabilities=capabilities)
+```
+
+### Firmware Version
+
+Read the device firmware version:
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    fw = await device.read_firmware_version()
+    print(f"Firmware: {fw['major']}.{fw['minor']}")
+```
+
+### Configuration Inspection
+
+Access detailed device configuration:
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Display configuration
+    display = device.config.displays[0]
+    print(f"Panel IC: {display.panel_ic_type}")
+    print(f"Rotation: {display.rotation}°")
+    print(f"Supports ZIP: {display.supports_zip}")
+    print(f"Supports Direct Write: {display.supports_direct_write}")
+
+    # System configuration
+    system = device.config.system
+    print(f"IC Type: {system.ic_type_enum.name}")
+    print(f"Has external power pin: {system.has_pwr_pin}")
+
+    # Power configuration
+    if device.config.power:
+        power = device.config.power
+        print(f"Battery: {power.battery_mah}mAh")
+        print(f"Power mode: {power.power_mode_enum.name}")
+```
+### Advertisement Parsing
+
+Parse real-time sensor data from BLE advertisements:
+
+```python
+from opendisplay import parse_advertisement
+
+# Parse manufacturer data from BLE advertisement
+adv_data = parse_advertisement(manufacturer_data)
+print(f"Battery: {adv_data.battery_mv}mV")
+print(f"Temperature: {adv_data.temperature_c}°C")
+print(f"Loop counter: {adv_data.loop_counter}")
+```
+
+### Device Discovery
+
+List all nearby OpenDisplay devices:
+```python
+from opendisplay import discover_devices
+
+# Scan for 10 seconds
+devices = await discover_devices(timeout=10.0)
+
+for name, mac in devices.items():
+    print(f"{name}: {mac}")
+
+# Output:
+# OpenDisplayA123: AA:BB:CC:DD:EE:FF
+# OpenDisplayB456: 11:22:33:44:55:66
+```
+
 
 ## Development
 
