@@ -287,6 +287,7 @@ class OpenDisplayDevice:
 
         # Parse version
         self._fw_version = parse_firmware_version(response)
+        # TODO also include firmware hash
 
         _LOGGER.info(
             "Firmware version: %d.%d",
