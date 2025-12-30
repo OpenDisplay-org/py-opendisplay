@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import struct
 import logging
+import struct
 
 from ..exceptions import ConfigParseError
 from ..models.config import (

@@ -13,7 +13,7 @@ from .encoding import (
     encode_bitplanes,
     encode_image,
 )
-from .exceptions import ProtocolError, BLETimeoutError
+from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
 from .models.enums import ColorScheme, DitherMode, RefreshMode

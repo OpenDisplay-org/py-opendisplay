@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+
 from bleak import BleakScanner
 
-from .protocol import MANUFACTURER_ID
 from .exceptions import BLETimeoutError
+from .protocol import MANUFACTURER_ID
 
 _LOGGER = logging.getLogger(__name__)
 

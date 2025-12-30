@@ -1,7 +1,8 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 from PIL import Image
 
 # Path to captured real protocol data

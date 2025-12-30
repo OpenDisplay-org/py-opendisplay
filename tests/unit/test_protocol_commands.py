@@ -1,13 +1,14 @@
 import pytest
+
 from opendisplay.protocol.commands import (
+    CHUNK_SIZE,
     CommandCode,
-    build_read_config_command,
-    build_read_fw_version_command,
-    build_direct_write_start_uncompressed,
-    build_direct_write_start_compressed,
     build_direct_write_data_command,
     build_direct_write_end_command,
-    CHUNK_SIZE,
+    build_direct_write_start_compressed,
+    build_direct_write_start_uncompressed,
+    build_read_config_command,
+    build_read_fw_version_command,
 )
 
 

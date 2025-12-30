@@ -1,13 +1,14 @@
 """Test model enums and conversions."""
 
 import pytest
+
 from opendisplay.models.enums import (
+    BusType,
     ColorScheme,
-    RefreshMode,
     DitherMode,
     ICType,
     PowerMode,
-    BusType,
+    RefreshMode,
     Rotation,
 )
 

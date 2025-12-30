@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import ClassVar, Optional
-from .enums import ICType, PowerMode, ColorScheme, Rotation, BusType
+
+from .enums import BusType, ColorScheme, ICType, PowerMode, Rotation
 
 
 @dataclass

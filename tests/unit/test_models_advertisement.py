@@ -1,6 +1,7 @@
 """Test BLE advertisement data parsing."""
 
 import pytest
+
 from opendisplay.models.advertisement import AdvertisementData, parse_advertisement
 
 

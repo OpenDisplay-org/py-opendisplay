@@ -1,15 +1,16 @@
 """Test protocol response parsing."""
 
 import pytest
-from opendisplay.protocol.responses import (
-    unpack_command_code,
-    strip_command_echo,
-    check_response_type,
-    validate_ack_response,
-    parse_firmware_version,
-)
-from opendisplay.protocol.commands import CommandCode
+
 from opendisplay.exceptions import InvalidResponseError
+from opendisplay.protocol.commands import CommandCode
+from opendisplay.protocol.responses import (
+    check_response_type,
+    parse_firmware_version,
+    strip_command_echo,
+    unpack_command_code,
+    validate_ack_response,
+)
 
 
 class TestUnpackCommandCode:
