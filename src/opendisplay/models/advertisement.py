@@ -7,13 +7,15 @@ from dataclasses import dataclass
 class AdvertisementData:
     """Parsed BLE advertisement manufacturer data.
 
-    Advertisement format (13 bytes):
+    Advertisement format (11 bytes, manufacturer ID already stripped by Bleak):
 
-    - [0-1]: Manufacturer ID 0x2446 (little-endian)
-    - [2-8]: Fixed protocol bytes
-    - [9-10]: Battery voltage in millivolts (little-endian uint16)
-    - [11]: Chip temperature in Celsius (signed int8)
-    - [12]: Loop counter (uint8, increments each advertisement)
+    - [0-6]: Fixed protocol bytes
+    - [7-8]: Battery voltage in millivolts (little-endian uint16)
+    - [9]: Chip temperature in Celsius (signed int8)
+    - [10]: Loop counter (uint8, increments each advertisement)
+
+    Note: Bleak provides manufacturer data as {0x2446: bytes([...])},
+    so the 2-byte manufacturer ID is not included in this data.
 
     Attributes:
         battery_mv: Battery voltage in millivolts
@@ -28,30 +30,26 @@ class AdvertisementData:
 def parse_advertisement(data: bytes) -> AdvertisementData:
     """Parse BLE advertisement manufacturer data.
 
+    Note: The manufacturer ID (0x2446) is already stripped by Bleak
+    and provided as the dictionary key in advertisement_data.manufacturer_data.
+
     Args:
-        data: Raw manufacturer data (13 bytes minimum)
+        data: Raw manufacturer data (11 bytes, without the manufacturer ID prefix)
 
     Returns:
         AdvertisementData with parsed values
 
     Raises:
-        ValueError: If data is too short or invalid
+        ValueError: If data is too short
     """
-    if len(data) < 13:
-        raise ValueError(f"Advertisement data too short: {len(data)} bytes (need 13)")
+    if len(data) < 11:
+        raise ValueError(f"Advertisement data too short: {len(data)} bytes (need 11)")
 
-    # Verify manufacturer ID (bytes 0-1, little-endian)
-    manufacturer_id = struct.unpack("<H", data[0:2])[0]
-    if manufacturer_id != 0x2446:
-        raise ValueError(
-            f"Invalid manufacturer ID: 0x{manufacturer_id:04x} (expected 0x2446)"
-        )
-
-    # Parse sensor data (bytes 9-12)
-    # Bytes 2-8 are fixed protocol bytes (ignored)
-    battery_mv = struct.unpack("<H", data[9:11])[0]  # uint16, little-endian
-    temperature_c = struct.unpack("b", data[11:12])[0]  # int8, signed
-    loop_counter = data[12]  # uint8
+    # Parse sensor data
+    # Bytes 0-6 are fixed protocol bytes (ignored)
+    battery_mv = struct.unpack("<H", data[7:9])[0]  # uint16, little-endian
+    temperature_c = struct.unpack("b", data[9:10])[0]  # int8, signed
+    loop_counter = data[10]  # uint8
 
     return AdvertisementData(
         battery_mv=battery_mv,
