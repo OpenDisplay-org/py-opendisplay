@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.2.0...v0.2.1) (2025-12-30)
+
+
+### Bug Fixes
+
+* correct advertisement data ([ec152ba](https://github.com/OpenDisplay-org/py-opendisplay/commit/ec152ba53ec7c543957db2b6f618f4485c927b68))
+
+
+### Documentation
+
+* improve README.md ([e90a612](https://github.com/OpenDisplay-org/py-opendisplay/commit/e90a6128fe20b1bbbfcbaa0b303c72e8ab5359d8))
+
 ## [0.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.1.1...v0.2.0) (2025-12-29)
 
 
