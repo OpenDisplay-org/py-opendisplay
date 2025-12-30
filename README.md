@@ -144,12 +144,17 @@ device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", capabilities=capabil
 
 ### Firmware Version
 
-Read the device firmware version:
+Read the device firmware version including git commit SHA:
 
 ```python
 async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     fw = await device.read_firmware_version()
     print(f"Firmware: {fw['major']}.{fw['minor']}")
+    print(f"Git SHA: {fw['sha']}")
+
+    # Example output:
+    # Firmware: 0.65
+    # Git SHA: e63ae32447a83f3b64f3146999060ca1e906bf15
 ```
 
 ### Configuration Inspection
