@@ -22,6 +22,7 @@ from .enums import (
     RefreshMode,
     Rotation,
 )
+from .firmware import FirmwareVersion
 
 __all__ = [
     "AdvertisementData",
@@ -33,6 +34,7 @@ __all__ = [
     "DeviceCapabilities",
     "DisplayConfig",
     "DitherMode",
+    "FirmwareVersion",
     "GlobalConfig",
     "ICType",
     "LedConfig",

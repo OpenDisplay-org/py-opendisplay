@@ -134,41 +134,84 @@ class TestParseFirmwareVersion:
     """Test firmware version parsing."""
 
     def test_parse_firmware_version_basic(self):
-        """Test parsing firmware version with echo."""
-        # Format: [echo:2][major:1][minor:1]
-        data = b'\x00\x43\x01\x05'  # Version 1.5
+        """Test parsing firmware version with echo and SHA."""
+        # Format: [echo:2][major:1][minor:1][shaLength:1][sha:variable]
+        data = b'\x00\x43\x01\x05\x07gaberin'  # Version 1.5, SHA "gaberin"
         result = parse_firmware_version(data)
-        assert result == {"major": 1, "minor": 5}
+        assert result == {"major": 1, "minor": 5, "sha": "gaberin"}
 
     def test_parse_firmware_version_with_ack_bit(self):
         """Test parsing with ACK bit set in echo."""
-        data = b'\x80\x43\x02\x03'  # Version 2.3 with ACK
+        data = b'\x80\x43\x02\x03\x04test'  # Version 2.3 with ACK, SHA "test"
         result = parse_firmware_version(data)
-        assert result == {"major": 2, "minor": 3}
+        assert result == {"major": 2, "minor": 3, "sha": "test"}
 
     def test_parse_firmware_version_real_data(self, real_firmware_response):
         """Test parsing real firmware response from device."""
-        if real_firmware_response and len(real_firmware_response) >= 4:
+        if real_firmware_response and len(real_firmware_response) >= 5:
             result = parse_firmware_version(real_firmware_response)
 
             # Verify structure
             assert "major" in result
             assert "minor" in result
+            assert "sha" in result
 
             # Versions should be reasonable (0-255)
             assert 0 <= result["major"] <= 255
             assert 0 <= result["minor"] <= 255
 
-            print(f"Real device firmware: {result['major']}.{result['minor']}")
+            # SHA should be a non-empty string
+            assert isinstance(result["sha"], str)
+            assert len(result["sha"]) > 0
+
+            print(f"Real device firmware: {result['major']}.{result['minor']} (SHA: {result['sha'][:8]}...)")
 
     def test_parse_firmware_version_too_short(self):
         """Test parsing fails on truncated response."""
-        data = b'\x00\x43\x01'  # Only 3 bytes, need 4
+        data = b'\x00\x43\x01\x05'  # Only 4 bytes, need at least 5 (missing shaLength)
         with pytest.raises(InvalidResponseError, match="too short"):
             parse_firmware_version(data)
 
     def test_parse_firmware_version_wrong_echo(self):
         """Test parsing fails on wrong command echo."""
-        data = b'\x00\x40\x01\x05'  # Wrong command (0x0040 not 0x0043)
+        data = b'\x00\x40\x01\x05\x00'  # Wrong command (0x0040 not 0x0043)
         with pytest.raises(InvalidResponseError, match="echo mismatch"):
+            parse_firmware_version(data)
+
+    def test_parse_firmware_version_long_sha(self):
+        """Test parsing firmware version with long SHA hash."""
+        sha_string = "6761626572696e31323334353637383930"  # 34 chars
+        sha_bytes = sha_string.encode('ascii')
+        sha_length = len(sha_bytes)
+
+        data = b'\x80\x43\x01\x00' + bytes([sha_length]) + sha_bytes
+
+        result = parse_firmware_version(data)
+
+        assert result["major"] == 1
+        assert result["minor"] == 0
+        assert result["sha"] == sha_string
+        assert len(result["sha"]) == 34
+
+    def test_parse_firmware_version_incomplete_sha(self):
+        """Test error when SHA length exceeds actual data."""
+        # Claims 10 bytes of SHA but only provides 5
+        data = b'\x80\x43\x01\x05\x0a12345'  # shaLength=10, actual=5
+
+        with pytest.raises(InvalidResponseError, match="incomplete.*expected 15 bytes.*got 10"):
+            parse_firmware_version(data)
+
+    def test_parse_firmware_version_invalid_sha_encoding(self):
+        """Test error when SHA contains non-ASCII bytes."""
+        # Invalid UTF-8 sequence in SHA
+        data = b'\x80\x43\x01\x05\x03\xff\xfe\xfd'
+
+        with pytest.raises(InvalidResponseError, match="Invalid SHA hash encoding"):
+            parse_firmware_version(data)
+
+    def test_parse_firmware_version_missing_sha(self):
+        """Test error when SHA hash is missing (shaLength=0)."""
+        data = b'\x80\x43\x01\x05\x00'  # shaLength=0
+
+        with pytest.raises(InvalidResponseError, match="missing SHA hash"):
             parse_firmware_version(data)

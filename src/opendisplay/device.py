@@ -17,6 +17,7 @@ from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
 from .models.enums import ColorScheme, DitherMode, RefreshMode
+from .models.firmware import FirmwareVersion
 from .protocol import (
     CHUNK_SIZE,
     MAX_COMPRESSED_SIZE,
@@ -116,7 +117,7 @@ class OpenDisplayDevice:
 
         self._config = config
         self._capabilities = capabilities
-        self._fw_version: dict[str, int] | None = None
+        self._fw_version: FirmwareVersion | None = None
 
     async def __aenter__(self) -> OpenDisplayDevice:
         """Connect and optionally interrogate device."""
@@ -270,11 +271,11 @@ class OpenDisplayDevice:
 
         return self._config
 
-    async def read_firmware_version(self) -> dict[str, int]:
+    async def read_firmware_version(self) -> FirmwareVersion:
         """Read firmware version from device.
 
         Returns:
-            Dictionary with 'major' and 'minor' version numbers
+            FirmwareVersion dictionary with 'major', 'minor', and 'sha' fields
         """
         _LOGGER.debug("Reading firmware version")
 
@@ -285,14 +286,14 @@ class OpenDisplayDevice:
         # Read response
         response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
 
-        # Parse version
+        # Parse version (includes SHA hash)
         self._fw_version = parse_firmware_version(response)
-        # TODO also include firmware hash
 
         _LOGGER.info(
-            "Firmware version: %d.%d",
+            "Firmware version: %d.%d (SHA: %s...)",
             self._fw_version["major"],
             self._fw_version["minor"],
+            self._fw_version["sha"][:8],
         )
 
         return self._fw_version

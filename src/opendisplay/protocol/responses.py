@@ -5,6 +5,7 @@ from __future__ import annotations
 import struct
 
 from ..exceptions import InvalidResponseError
+from ..models.firmware import FirmwareVersion
 from .commands import RESPONSE_HIGH_BIT_FLAG, CommandCode
 
 
@@ -84,23 +85,23 @@ def validate_ack_response(data: bytes, expected_command: int) -> None:
         )
 
 
-def parse_firmware_version(data: bytes) -> dict[str, int]:
+def parse_firmware_version(data: bytes) -> FirmwareVersion:
     """Parse firmware version response.
 
-    Format: [echo:2][major:1][minor:1]
+    Format: [echo:2][major:1][minor:1][shaLength:1][sha:variable]
 
     Args:
         data: Raw firmware version response
 
     Returns:
-        Dictionary with 'major' and 'minor' version numbers
+        FirmwareVersion dictionary with 'major', 'minor', and 'sha' fields
 
     Raises:
         InvalidResponseError: If response format invalid
     """
-    if len(data) < 4:
+    if len(data) < 5:
         raise InvalidResponseError(
-            f"Firmware version response too short: {len(data)} bytes (need 4)"
+            f"Firmware version response too short: {len(data)} bytes (need at least 5)"
         )
 
     # Validate echo
@@ -112,8 +113,31 @@ def parse_firmware_version(data: bytes) -> dict[str, int]:
 
     major = data[2]
     minor = data[3]
+    sha_length = data[4]
+
+    # SHA hash is always present in firmware responses
+    if sha_length == 0:
+        raise InvalidResponseError("Firmware version missing SHA hash (shaLength is 0)")
+
+    # Validate sufficient bytes for SHA
+    expected_total_length = 5 + sha_length
+    if len(data) < expected_total_length:
+        raise InvalidResponseError(
+            f"Firmware version response incomplete: expected {expected_total_length} bytes "
+            f"(5 header + {sha_length} SHA), got {len(data)}"
+        )
+
+    # Extract SHA bytes and decode as ASCII string
+    sha_bytes = data[5:5 + sha_length]
+    try:
+        sha = sha_bytes.decode('ascii')
+    except UnicodeDecodeError as e:
+        raise InvalidResponseError(
+            f"Invalid SHA hash encoding (expected ASCII): {e}"
+        ) from e
 
     return {
         "major": major,
         "minor": minor,
+        "sha": sha,
     }
