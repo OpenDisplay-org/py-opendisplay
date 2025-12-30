@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.2.1...v0.3.0) (2025-12-30)
+
+
+### Features
+
+* add sha to firmware version parsing ([a47d58e](https://github.com/OpenDisplay-org/py-opendisplay/commit/a47d58e07d20b232b65b56d74edef64477497a37))
+
+
+### Bug Fixes
+
+* fix compressed image upload with chunking ([5d1b48a](https://github.com/OpenDisplay-org/py-opendisplay/commit/5d1b48a3ce8e7fae27526fa1d7495f81ef0bd65d)), closes [#5](https://github.com/OpenDisplay-org/py-opendisplay/issues/5)
+
+
+### Documentation
+
+* add git commit SHA documentation ([0e2ef50](https://github.com/OpenDisplay-org/py-opendisplay/commit/0e2ef50b7b813e87aceaa7620e7759325dcce0e7))
+
 ## [0.2.1](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.2.0...v0.2.1) (2025-12-30)
 
 
