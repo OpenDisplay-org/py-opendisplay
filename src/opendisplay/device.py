@@ -426,9 +426,12 @@ class OpenDisplayDevice:
         """
         # 1. Send START command (different for each protocol)
         if use_compression:
-            start_cmd = build_direct_write_start_compressed(uncompressed_size, compressed_data)
+            start_cmd, remaining_compressed = build_direct_write_start_compressed(
+                uncompressed_size, compressed_data
+            )
         else:
             start_cmd = build_direct_write_start_uncompressed()
+            remaining_compressed = None
 
         await self._connection.write_command(start_cmd)
 
@@ -436,9 +439,14 @@ class OpenDisplayDevice:
         response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
         validate_ack_response(response, CommandCode.DIRECT_WRITE_START)
 
-        # 3. Send data chunks (only for uncompressed protocol)
+        # 3. Send data chunks
         auto_completed = False
-        if not use_compression:
+        if use_compression:
+            # Compressed upload: send remaining compressed data as chunks
+            if remaining_compressed:
+                auto_completed = await self._send_data_chunks(remaining_compressed)
+        else:
+            # Uncompressed upload: send raw image data as chunks
             auto_completed = await self._send_data_chunks(image_data)
 
         # 4. Send END command if needed (identical for both protocols)

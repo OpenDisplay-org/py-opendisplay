@@ -42,17 +42,65 @@ class TestCommandBuilders:
         if real_upload_start_command:
             assert cmd == real_upload_start_command
 
-    def test_build_direct_write_start_compressed(self):
-        """Test compressed START includes size and data."""
-        compressed_data = b'\x78\x9c\x01\x02\x03'  # 5 bytes zlib data
-        uncompressed_size = 100
+    def test_build_direct_write_start_compressed_small(self):
+        """Test compressed START with payload that fits (≤194 bytes)."""
+        compressed_data = b'\x78\x9c' + b'A' * 100  # 102 bytes total
+        uncompressed_size = 500
 
-        cmd = build_direct_write_start_compressed(uncompressed_size, compressed_data)
+        start_cmd, remaining = build_direct_write_start_compressed(
+            uncompressed_size, compressed_data
+        )
 
-        # Format: [cmd:2][size:4 LE][data:all]
-        assert cmd[:2] == b'\x00\x70'  # Command code
-        assert cmd[2:6] == uncompressed_size.to_bytes(4, 'little')  # Size
-        assert cmd[6:] == compressed_data  # Compressed data
+        # All data should fit in START
+        assert len(remaining) == 0
+        assert len(start_cmd) == 2 + 4 + 102  # cmd + size + data
+        assert start_cmd[:2] == b'\x00\x70'  # Command code
+        assert start_cmd[2:6] == uncompressed_size.to_bytes(4, 'little')
+        assert start_cmd[6:] == compressed_data
+
+    def test_build_direct_write_start_compressed_large(self):
+        """Test compressed START with payload exceeding 194 bytes."""
+        compressed_data = b'\x78\x9c' + b'A' * 300  # 302 bytes total
+        uncompressed_size = 1000
+
+        start_cmd, remaining = build_direct_write_start_compressed(
+            uncompressed_size, compressed_data
+        )
+
+        # Should split: 194 bytes in START, 108 bytes remaining
+        assert len(remaining) == 302 - 194  # 108 bytes
+        assert len(start_cmd) == 2 + 4 + 194  # cmd + size + max chunk
+        assert start_cmd[:2] == b'\x00\x70'
+        assert start_cmd[2:6] == uncompressed_size.to_bytes(4, 'little')
+        assert start_cmd[6:] == compressed_data[:194]
+        assert remaining == compressed_data[194:]
+
+    def test_build_direct_write_start_compressed_exact_boundary(self):
+        """Test compressed START with exactly 194 bytes."""
+        compressed_data = b'A' * 194
+        uncompressed_size = 500
+
+        start_cmd, remaining = build_direct_write_start_compressed(
+            uncompressed_size, compressed_data
+        )
+
+        # Exactly fits, no remaining
+        assert len(remaining) == 0
+        assert len(start_cmd) == 200  # 2 + 4 + 194 = MAX_START_PAYLOAD
+
+    def test_build_direct_write_start_compressed_one_over_boundary(self):
+        """Test compressed START with 195 bytes (first case needing chunking)."""
+        compressed_data = b'A' * 195
+        uncompressed_size = 500
+
+        start_cmd, remaining = build_direct_write_start_compressed(
+            uncompressed_size, compressed_data
+        )
+
+        # Should split: 194 in START, 1 byte remaining
+        assert len(remaining) == 1
+        assert len(start_cmd) == 200  # 2 + 4 + 194
+        assert remaining == b'A'
 
     def test_build_direct_write_data_command(self, real_data_chunk_command):
         """Test DATA command prepends command code to chunk."""

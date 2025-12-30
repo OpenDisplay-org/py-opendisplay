@@ -33,6 +33,7 @@ PIPELINE_CHUNKS = 1  # Wait for ACK after each chunk
 
 # Upload protocol constants
 MAX_COMPRESSED_SIZE = 50 * 1024  # 50KB - firmware buffer limit for compressed uploads
+MAX_START_PAYLOAD = 200  # Maximum bytes in START command (prevents MTU issues)
 
 
 def build_read_config_command() -> bytes:
@@ -56,28 +57,46 @@ def build_read_fw_version_command() -> bytes:
 def build_direct_write_start_compressed(
         uncompressed_size: int,
         compressed_data: bytes
-) -> bytes:
-    """Build START command for compressed upload protocol.
+) -> tuple[bytes, bytes]:
+    """Build START command for compressed upload with chunking.
 
-    This protocol sends ALL image data in the START command.
-    No 0x0071 DATA chunks are sent after this!
+    To prevent BLE MTU issues, the START command is limited to MAX_START_PAYLOAD
+    bytes. For large compressed payloads, this returns:
+    - START command with header + first chunk of compressed data
+    - Remaining compressed data (to be sent via DATA chunks)
 
     Args:
         uncompressed_size: Original uncompressed image size in bytes
         compressed_data: Complete compressed image data
 
     Returns:
-        Command bytes: 0x0070 + uncompressed_size (4 bytes) + ALL compressed_data
+        Tuple of (start_command, remaining_data):
+        - start_command: 0x0070 + uncompressed_size (4 bytes) + first chunk
+        - remaining_data: Compressed data not included in START (empty if all fits)
 
-    Format:
-        [cmd:2][uncompressed_size:4][compressed_data:all]
+    Format of START command:
+        [cmd:2][uncompressed_size:4][compressed_data:up to 194 bytes]
         - cmd: 0x0070 (big-endian)
         - uncompressed_size: Original size before compression (little-endian uint32)
-        - compressed_data: Complete compressed image (device will decompress)
+        - compressed_data: First chunk of compressed data
     """
     cmd = CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder='big')
     size = uncompressed_size.to_bytes(4, byteorder='little')
-    return cmd + size + compressed_data  # ALL data in START!
+
+    # Calculate max compressed data that fits in START
+    # MAX_START_PAYLOAD = 200 total bytes
+    # Header uses: 2 (cmd) + 4 (size) = 6 bytes
+    # Remaining for compressed data: 200 - 6 = 194 bytes
+    max_data_in_start = MAX_START_PAYLOAD - 6  # 194 bytes
+
+    if len(compressed_data) <= max_data_in_start:
+        # All compressed data fits in START command
+        return cmd + size + compressed_data, b''
+    else:
+        # Split: first chunk in START, rest returned separately
+        first_chunk = compressed_data[:max_data_in_start]
+        remaining = compressed_data[max_data_in_start:]
+        return cmd + size + first_chunk, remaining
 
 
 def build_direct_write_start_uncompressed() -> bytes:
