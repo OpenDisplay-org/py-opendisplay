@@ -212,6 +212,50 @@ for name, mac in devices.items():
 # OpenDisplayB456: 11:22:33:44:55:66
 ```
 
+## Connection Reliability
+
+py-opendisplay uses `bleak-retry-connector` for robust BLE connections with:
+- Automatic retry logic with exponential backoff
+- Connection slot management for ESP32 Bluetooth proxies
+- GATT service caching for faster reconnections
+- Better error categorization
+
+### Home Assistant Integration
+
+When using py-opendisplay in Home Assistant custom integrations, pass the `BLEDevice` object for optimal performance:
+
+```python
+from homeassistant.components import bluetooth
+from opendisplay import OpenDisplayDevice
+
+# Get BLEDevice from Home Assistant
+ble_device = bluetooth.async_ble_device_from_address(hass, mac_address)
+
+async with OpenDisplayDevice(mac_address=mac_address, ble_device=ble_device) as device:
+    await device.upload_image(image)
+```
+
+### Retry Configuration
+
+Configure retry behavior for unreliable environments:
+
+```python
+# Increase retry attempts for poor BLE conditions
+async with OpenDisplayDevice(
+    mac_address="AA:BB:CC:DD:EE:FF",
+    max_attempts=6,  # Try up to 6 times (default: 4)
+) as device:
+    await device.upload_image(image)
+
+# Disable service caching after firmware updates
+async with OpenDisplayDevice(
+    mac_address="AA:BB:CC:DD:EE:FF",
+    use_services_cache=False,  # Force fresh service discovery
+) as device:
+    await device.upload_image(image)
+```
+
+
 
 ## Development
 

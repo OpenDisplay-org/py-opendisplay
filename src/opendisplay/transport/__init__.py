@@ -1,8 +1,7 @@
 """BLE transport layer."""
 
-from .connection import BLEConnection, get_device_lock
+from .connection import BLEConnection
 
 __all__ = [
     "BLEConnection",
-    "get_device_lock",
 ]

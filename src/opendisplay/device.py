@@ -76,6 +76,8 @@ class OpenDisplayDevice:
             capabilities: DeviceCapabilities | None = None,
             timeout: float = 10.0,
             discovery_timeout: float = 10.0,
+            max_attempts: int = 4,
+            use_services_cache: bool = True,
     ):
         """Initialize OpenDisplay device.
 
@@ -87,6 +89,8 @@ class OpenDisplayDevice:
             capabilities: Optional minimal device info (skips interrogation)
             timeout: BLE operation timeout in seconds (default: 10)
             discovery_timeout: Timeout for name resolution scan (default: 10)
+            max_attempts: Maximum connection attempts for bleak-retry-connector (default: 4)
+            use_services_cache: Enable GATT service caching for faster reconnections (default: True)
 
         Raises:
             ValueError: If neither or both mac_address and device_name provided
@@ -110,6 +114,8 @@ class OpenDisplayDevice:
         self._discovery_timeout = discovery_timeout
         self._ble_device = ble_device
         self._timeout = timeout
+        self._max_attempts = max_attempts
+        self._use_services_cache = use_services_cache
 
         # Will be set after resolution
         self.mac_address = mac_address or ""  # Resolved in __aenter__
@@ -152,6 +158,8 @@ class OpenDisplayDevice:
             self.mac_address,
             self._ble_device,
             self._timeout,
+            max_attempts=self._max_attempts,
+            use_services_cache=self._use_services_cache,
         )
 
         await self._connection.connect()
