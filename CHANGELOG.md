@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.3.0...v1.0.0) (2026-01-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connection:** Removed get_device_lock from public API. The global per-device lock mechanism has been removed in favor of simpler single-instance usage pattern.
+
+### Features
+
+* **connection:** integrate bleak-retry-connector for reliable connections ([088c187](https://github.com/OpenDisplay-org/py-opendisplay/commit/088c187c32e6b6564ef5d12184dbe57976e60cf7))
+
 ## [0.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.2.1...v0.3.0) (2025-12-30)
 
 
