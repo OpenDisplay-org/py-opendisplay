@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v1.0.0...v2.0.0) (2026-01-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* Dithering functionality moved to standalone epaper-dithering package
+
+### Code Refactoring
+
+* extract dithering to epaper-dithering package ([95aa3c1](https://github.com/OpenDisplay-org/py-opendisplay/commit/95aa3c1700cad438b36146443e01f1fb8bcb00f3))
+
 ## [1.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v0.3.0...v1.0.0) (2026-01-09)
 
 
