@@ -5,18 +5,18 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from epaper_dithering import ColorScheme, DitherMode, dither_image
 from PIL import Image
 
 from .encoding import (
     compress_image_data,
-    dither_image,
     encode_bitplanes,
     encode_image,
 )
 from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
-from .models.enums import ColorScheme, DitherMode, RefreshMode
+from .models.enums import RefreshMode
 from .models.firmware import FirmwareVersion
 from .protocol import (
     CHUNK_SIZE,

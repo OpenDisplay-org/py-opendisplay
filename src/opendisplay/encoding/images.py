@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 import numpy as np
+from epaper_dithering import ColorScheme
 from PIL import Image
-
-if TYPE_CHECKING:
-    from ..models.enums import ColorScheme
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +24,6 @@ def encode_image(
     Returns:
         Encoded image bytes
     """
-    from ..models.enums import ColorScheme
 
     if color_scheme == ColorScheme.MONO:
         return encode_1bpp(image)

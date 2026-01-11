@@ -3,6 +3,8 @@
   Pure Python package for communicating with OpenDisplay BLE e-paper tags.
   """
 
+from epaper_dithering import ColorScheme, DitherMode
+
 from .device import OpenDisplayDevice
 from .discovery import discover_devices
 from .exceptions import (
@@ -29,8 +31,6 @@ from .models.config import (
 )
 from .models.enums import (
     BusType,
-    ColorScheme,
-    DitherMode,
     ICType,
     PowerMode,
     RefreshMode,
@@ -67,8 +67,8 @@ __all__ = [
     "AdvertisementData",
     # Enums
     "ColorScheme",
-    "RefreshMode",
     "DitherMode",
+    "RefreshMode",
     "ICType",
     "PowerMode",
     "BusType",

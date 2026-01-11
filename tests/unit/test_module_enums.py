@@ -1,89 +1,13 @@
 """Test model enums and conversions."""
 
-import pytest
 
 from opendisplay.models.enums import (
     BusType,
-    ColorScheme,
-    DitherMode,
     ICType,
     PowerMode,
     RefreshMode,
     Rotation,
 )
-
-
-class TestColorScheme:
-    """Test ColorScheme enum."""
-
-    def test_color_scheme_values(self):
-        """Test all color schemes have correct firmware values."""
-        assert ColorScheme.MONO.value == 0
-        assert ColorScheme.BWR.value == 1
-        assert ColorScheme.BWY.value == 2
-        assert ColorScheme.BWRY.value == 3
-        assert ColorScheme.BWGBRY.value == 4
-        assert ColorScheme.GRAYSCALE_4.value == 5
-
-    def test_color_scheme_from_value(self):
-        """Test converting firmware value to ColorScheme."""
-        assert ColorScheme.from_value(0) == ColorScheme.MONO
-        assert ColorScheme.from_value(1) == ColorScheme.BWR
-        assert ColorScheme.from_value(2) == ColorScheme.BWY
-        assert ColorScheme.from_value(3) == ColorScheme.BWRY
-        assert ColorScheme.from_value(4) == ColorScheme.BWGBRY
-        assert ColorScheme.from_value(5) == ColorScheme.GRAYSCALE_4
-
-    def test_color_scheme_from_value_invalid(self):
-        """Test invalid firmware value raises ValueError."""
-        with pytest.raises(ValueError):
-            ColorScheme.from_value(99)
-
-    def test_color_scheme_names(self):
-        """Test enum names are correct."""
-        assert ColorScheme.MONO.name == "MONO"
-        assert ColorScheme.BWR.name == "BWR"
-        assert ColorScheme.BWY.name == "BWY"
-        assert ColorScheme.BWRY.name == "BWRY"
-        assert ColorScheme.BWGBRY.name == "BWGBRY"
-        assert ColorScheme.GRAYSCALE_4.name == "GRAYSCALE_4"
-
-    def test_color_scheme_palette(self):
-        """Test color schemes have palettes."""
-        # All schemes should have palette attribute
-        assert hasattr(ColorScheme.MONO.palette, 'colors')
-        assert hasattr(ColorScheme.BWR.palette, 'colors')
-        assert hasattr(ColorScheme.BWY.palette, 'colors')
-        assert hasattr(ColorScheme.BWRY.palette, 'colors')
-        assert hasattr(ColorScheme.BWGBRY.palette, 'colors')
-        assert hasattr(ColorScheme.GRAYSCALE_4.palette, 'colors')
-
-        # MONO should have 2 colors
-        assert len(ColorScheme.MONO.palette.colors) == 2
-
-        # BWR should have 3 colors
-        assert len(ColorScheme.BWR.palette.colors) == 3
-
-        # BWY should have 3 colors
-        assert len(ColorScheme.BWY.palette.colors) == 3
-
-        # BWGBRY should have 6 colors
-        assert len(ColorScheme.BWGBRY.palette.colors) == 6
-
-        # Grayscale should have 4 colors
-        assert len(ColorScheme.GRAYSCALE_4.palette.colors) == 4
-
-    def test_color_scheme_accent_color(self):
-        """Test accent color detection."""
-        assert ColorScheme.MONO.accent_color == "black"
-        assert ColorScheme.BWR.accent_color == "red"
-        assert ColorScheme.BWY.accent_color == "yellow"
-        # BWRY has both red and yellow, red is primary
-        assert ColorScheme.BWRY.accent_color == "red"
-        # BWGBRY has red, yellow, gree, and blue, red is primary
-        assert ColorScheme.BWGBRY.accent_color == "red"
-        # Grayscale has black as primary color
-        assert ColorScheme.GRAYSCALE_4.accent_color == "black"
 
 
 class TestRefreshMode:
@@ -104,37 +28,6 @@ class TestRefreshMode:
         assert RefreshMode.PARTIAL2.name == "PARTIAL2"
 
 
-class TestDitherMode:
-    """Test DitherMode enum."""
-
-    def test_dither_mode_values(self):
-        """Test all dithering modes have correct values."""
-        assert DitherMode.NONE == 0
-        assert DitherMode.BURKES == 1
-        assert DitherMode.ORDERED == 2
-        assert DitherMode.FLOYD_STEINBERG == 3
-        assert DitherMode.ATKINSON == 4
-        assert DitherMode.STUCKI == 5
-        assert DitherMode.SIERRA == 6
-        assert DitherMode.SIERRA_LITE == 7
-        assert DitherMode.JARVIS_JUDICE_NINKE == 8
-
-    def test_dither_mode_names(self):
-        """Test dithering mode names."""
-        assert DitherMode.NONE.name == "NONE"
-        assert DitherMode.BURKES.name == "BURKES"
-        assert DitherMode.ORDERED.name == "ORDERED"
-        assert DitherMode.FLOYD_STEINBERG.name == "FLOYD_STEINBERG"
-        assert DitherMode.ATKINSON.name == "ATKINSON"
-        assert DitherMode.STUCKI.name == "STUCKI"
-        assert DitherMode.SIERRA.name == "SIERRA"
-        assert DitherMode.SIERRA_LITE.name == "SIERRA_LITE"
-        assert DitherMode.JARVIS_JUDICE_NINKE.name == "JARVIS_JUDICE_NINKE"
-
-    def test_all_dither_modes_exist(self):
-        """Test all 9 dithering modes are defined."""
-        modes = list(DitherMode)
-        assert len(modes) == 9
 
 
 class TestICType:

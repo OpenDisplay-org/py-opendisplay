@@ -15,8 +15,6 @@ from .config import (
 )
 from .enums import (
     BusType,
-    ColorScheme,
-    DitherMode,
     ICType,
     PowerMode,
     RefreshMode,
@@ -29,11 +27,9 @@ __all__ = [
     "parse_advertisement",
     "BinaryInputs",
     "BusType",
-    "ColorScheme",
     "DataBus",
     "DeviceCapabilities",
     "DisplayConfig",
-    "DitherMode",
     "FirmwareVersion",
     "GlobalConfig",
     "ICType",

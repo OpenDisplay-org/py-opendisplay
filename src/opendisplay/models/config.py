@@ -8,7 +8,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar, Optional
 
-from .enums import BusType, ColorScheme, ICType, PowerMode, Rotation
+from epaper_dithering import ColorScheme
+
+from .enums import BusType, ICType, PowerMode, Rotation
 
 
 @dataclass
