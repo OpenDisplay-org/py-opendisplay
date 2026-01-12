@@ -11,6 +11,7 @@ class CommandCode(IntEnum):
     # Configuration commands
     READ_CONFIG = 0x0040          # Read TLV configuration
     WRITE_CONFIG = 0x0041         # Write TLV configuration (chunked)
+    WRITE_CONFIG_CHUNK = 0x0042   # Write config chunk (multi-chunk mode)
 
     # Firmware commands
     READ_FW_VERSION = 0x0043      # Read firmware version
@@ -29,7 +30,7 @@ RESPONSE_HIGH_BIT_FLAG = 0x8000  # High bit set in response codes indicates ACK
 
 # Chunking constants
 CHUNK_SIZE = 230  # Maximum data bytes per chunk
-CONFIG_CHUNK_SIZE = 96  # TLV config chunk data size
+CONFIG_CHUNK_SIZE = 200  # Maximum config chunk size (verified from firmware)
 PIPELINE_CHUNKS = 1  # Wait for ACK after each chunk
 
 # Upload protocol constants
@@ -168,3 +169,58 @@ def build_direct_write_end_command(refresh_mode: int = 0) -> bytes:
     cmd = CommandCode.DIRECT_WRITE_END.to_bytes(2, byteorder='big')
     refresh = refresh_mode.to_bytes(1, byteorder='big')
     return cmd + refresh
+
+
+def build_write_config_command(config_data: bytes) -> tuple[bytes, list[bytes]]:
+    """Build WRITE_CONFIG command with chunking support.
+
+    Protocol:
+    - Single chunk (≤200 bytes): [0x00][0x41][config_data]
+    - Multi-chunk (>200 bytes):
+      - First: [0x00][0x41][total_size:2LE][first_198_bytes]
+      - Rest: [0x00][0x42][chunk_data] (up to 200 bytes each)
+
+    Args:
+        config_data: Complete serialized config data
+
+    Returns:
+        Tuple of (first_command, remaining_chunks):
+        - first_command: 0x0041 command with first chunk
+        - remaining_chunks: List of 0x0042 commands for subsequent chunks
+
+    Example:
+        # Small config (≤200 bytes)
+        first_cmd, chunks = build_write_config_command(small_config)
+        # first_cmd: [0x00][0x41][config_data]
+        # chunks: []
+
+        # Large config (>200 bytes)
+        first_cmd, chunks = build_write_config_command(large_config)
+        # first_cmd: [0x00][0x41][total_size:2LE][first_198_bytes]
+        # chunks: [[0x00][0x42][chunk_data], ...]
+    """
+    cmd_write = CommandCode.WRITE_CONFIG.to_bytes(2, byteorder='big')
+    cmd_chunk = CommandCode.WRITE_CONFIG_CHUNK.to_bytes(2, byteorder='big')
+
+    config_len = len(config_data)
+
+    # Single chunk mode (≤200 bytes)
+    if config_len <= CONFIG_CHUNK_SIZE:
+        return cmd_write + config_data, []
+
+    # Multi-chunk mode (>200 bytes)
+    # First chunk: [cmd][total_size:2LE][first_198_bytes]
+    total_size = config_len.to_bytes(2, byteorder='little')
+    first_chunk_data_size = CONFIG_CHUNK_SIZE - 2  # 198 bytes
+    first_chunk = cmd_write + total_size + config_data[:first_chunk_data_size]
+
+    # Remaining chunks: [cmd][chunk_data] (up to 200 bytes each)
+    remaining_data = config_data[first_chunk_data_size:]
+    chunks = []
+
+    while remaining_data:
+        chunk_data = remaining_data[:CONFIG_CHUNK_SIZE]
+        chunks.append(cmd_chunk + chunk_data)
+        remaining_data = remaining_data[CONFIG_CHUNK_SIZE:]
+
+    return first_chunk, chunks

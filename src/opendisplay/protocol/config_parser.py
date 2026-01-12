@@ -69,10 +69,10 @@ def parse_config_response(raw_data: bytes) -> GlobalConfig:
     _LOGGER.debug("Packet data after wrapper strip: %d bytes", len(packet_data))
 
     # Parse TLV packets
-    return parse_tlv_config(packet_data)
+    return parse_tlv_config(packet_data, version=config_version)
 
 
-def parse_tlv_config(data: bytes) -> GlobalConfig:
+def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
     """Parse complete TLV configuration from device response.
 
     BLE format: [TLV packets...] (raw TLV data, no header)
@@ -81,6 +81,7 @@ def parse_tlv_config(data: bytes) -> GlobalConfig:
 
     Args:
         data: Raw TLV data from device (after echo bytes stripped)
+        version: Config version from wrapper (default 1 if called directly)
 
     Returns:
         GlobalConfig with all parsed configuration
@@ -130,45 +131,34 @@ def parse_tlv_config(data: bytes) -> GlobalConfig:
             packet_type, packet_number, packet_size
         )
 
-    # Parse required single-instance packets
+    # Parse packets in a single pass
+    # Note: Firmware uses global sequential numbering across all packet types
     system = None
     manufacturer = None
     power = None
-
-    if (PACKET_TYPE_SYSTEM, 0) in packets:
-        system = _parse_system_config(packets[(PACKET_TYPE_SYSTEM, 0)])
-
-    if (PACKET_TYPE_MANUFACTURER, 0) in packets:
-        manufacturer = _parse_manufacturer_data(packets[(PACKET_TYPE_MANUFACTURER, 0)])
-
-    if (PACKET_TYPE_POWER, 0) in packets:
-        power = _parse_power_option(packets[(PACKET_TYPE_POWER, 0)])
-
-    # Parse repeatable packets (max 4 instances each)
     displays = []
-    for i in range(4):
-        if (PACKET_TYPE_DISPLAY, i) in packets:
-            displays.append(_parse_display_config(packets[(PACKET_TYPE_DISPLAY, i)]))
-
     leds = []
-    for i in range(4):
-        if (PACKET_TYPE_LED, i) in packets:
-            leds.append(_parse_led_config(packets[(PACKET_TYPE_LED, i)]))
-
     sensors = []
-    for i in range(4):
-        if (PACKET_TYPE_SENSOR, i) in packets:
-            sensors.append(_parse_sensor_data(packets[(PACKET_TYPE_SENSOR, i)]))
-
     data_buses = []
-    for i in range(4):
-        if (PACKET_TYPE_DATABUS, i) in packets:
-            data_buses.append(_parse_data_bus(packets[(PACKET_TYPE_DATABUS, i)]))
-
     binary_inputs = []
-    for i in range(4):
-        if (PACKET_TYPE_BINARY_INPUT, i) in packets:
-            binary_inputs.append(_parse_binary_inputs(packets[(PACKET_TYPE_BINARY_INPUT, i)]))
+
+    for (packet_type, packet_number), data in packets.items():
+        if packet_type == PACKET_TYPE_SYSTEM:
+            system = _parse_system_config(data)
+        elif packet_type == PACKET_TYPE_MANUFACTURER:
+            manufacturer = _parse_manufacturer_data(data)
+        elif packet_type == PACKET_TYPE_POWER:
+            power = _parse_power_option(data)
+        elif packet_type == PACKET_TYPE_DISPLAY:
+            displays.append(_parse_display_config(data))
+        elif packet_type == PACKET_TYPE_LED:
+            leds.append(_parse_led_config(data))
+        elif packet_type == PACKET_TYPE_SENSOR:
+            sensors.append(_parse_sensor_data(data))
+        elif packet_type == PACKET_TYPE_DATABUS:
+            data_buses.append(_parse_data_bus(data))
+        elif packet_type == PACKET_TYPE_BINARY_INPUT:
+            binary_inputs.append(_parse_binary_inputs(data))
 
     return GlobalConfig(
         system=system,
@@ -179,8 +169,8 @@ def parse_tlv_config(data: bytes) -> GlobalConfig:
         sensors=sensors,
         data_buses=data_buses,
         binary_inputs=binary_inputs,
-        version=1,  # Default version
-        minor_version=0,
+        version=version,  # From firmware wrapper
+        minor_version=1,  # Not stored in device (only single version byte exists)
         loaded=True,
     )
 

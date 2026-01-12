@@ -14,8 +14,13 @@ from .commands import (
     build_read_config_command,
     build_read_fw_version_command,
     build_reboot_command,
+    build_write_config_command,
 )
 from .config_parser import parse_config_response
+from .config_serializer import (
+    calculate_config_crc,
+    serialize_config,
+)
 from .responses import (
     parse_firmware_version,
     validate_ack_response,
@@ -31,11 +36,14 @@ __all__ = [
     "build_read_config_command",
     "build_read_fw_version_command",
     "build_reboot_command",
+    "build_write_config_command",
     "build_direct_write_start_compressed",
     "build_direct_write_start_uncompressed",
     "build_direct_write_data_command",
     "build_direct_write_end_command",
     "parse_config_response",
+    "serialize_config",
+    "calculate_config_crc",
     "validate_ack_response",
     "parse_firmware_version",
 ]

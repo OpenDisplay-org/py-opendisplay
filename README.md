@@ -157,6 +157,45 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     # Git SHA: e63ae32447a83f3b64f3146999060ca1e906bf15
 ```
 
+### Writing Configuration
+
+Modify device settings and write them back to the device:
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Read current config
+    config = device.config
+
+    # Modify settings
+    config.displays[0].rotation = 1
+
+    # Write config back to device
+    await device.write_config(config)
+
+    # Reboot to apply changes
+    await device.reboot()
+```
+
+**Note:** Many configuration changes (rotation, pin assignments, IC type) require a device reboot to take effect.
+
+#### JSON Import/Export
+
+Export and import configurations using JSON files compatible with the [Open Display Config Builder](https://opendisplay.org/firmware/config/) web tool:
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Export current config to JSON
+    device.export_config_json("my_device_config.json")
+
+# Import config from JSON file
+config = OpenDisplayDevice.import_config_json("my_device_config.json")
+
+# Write imported config to another device
+async with OpenDisplayDevice(mac_address="BB:CC:DD:EE:FF:00") as device:
+    await device.write_config(config)
+    await device.reboot()
+```
+
 ### Rebooting the Device
 
 Remotely reboot the device (useful after configuration changes or troubleshooting):

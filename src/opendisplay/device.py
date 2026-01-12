@@ -29,8 +29,10 @@ from .protocol import (
     build_read_config_command,
     build_read_fw_version_command,
     build_reboot_command,
+    build_write_config_command,
     parse_config_response,
     parse_firmware_version,
+    serialize_config,
     validate_ack_response,
 )
 from .protocol.responses import check_response_type, strip_command_echo
@@ -335,6 +337,153 @@ class OpenDisplayDevice:
             self.mac_address
         )
 
+    async def write_config(self, config: GlobalConfig) -> None:
+        """Write configuration to device.
+
+        Serializes the GlobalConfig to TLV binary format and writes it
+        to the device using the WRITE_CONFIG (0x0041) command with
+        automatic chunking for large configs.
+
+        Args:
+            config: GlobalConfig to write to device
+
+        Raises:
+            ValueError: If config serialization fails or exceeds size limit
+            BLEConnectionError: If write fails
+            ProtocolError: If device returns error response
+
+        Example:
+            async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+                # Read current config
+                config = device.config
+
+                # Modify config
+                config.displays[0].rotation = 180
+
+                # Write back to device
+                await device.write_config(config)
+
+                # Reboot to apply changes
+                await device.reboot()
+        """
+        _LOGGER.debug("Writing config to device %s", self.mac_address)
+
+        # Validate critical packets are present
+        if not config.system:
+            _LOGGER.warning("Config missing system packet - device may not boot correctly")
+        if not config.displays:
+            raise ValueError("Config must have at least one display")
+
+        # Warn about optional but important packets
+        missing_packets = []
+        if not config.manufacturer:
+            missing_packets.append("manufacturer")
+        if not config.power:
+            missing_packets.append("power")
+
+        if missing_packets:
+            _LOGGER.warning(
+                "Config missing optional packets: %s. "
+                "Device may lose these settings.",
+                ", ".join(missing_packets)
+            )
+
+        # Serialize config to binary
+        config_data = serialize_config(config)
+
+        _LOGGER.info(
+            "Serialized config: %d bytes (chunking %s)",
+            len(config_data),
+            "required" if len(config_data) > 200 else "not needed"
+        )
+
+        # Build command with chunking
+        first_cmd, chunk_cmds = build_write_config_command(config_data)
+
+        # Send first command
+        _LOGGER.debug("Sending first config chunk (%d bytes)", len(first_cmd))
+        await self._connection.write_command(first_cmd)
+
+        # Wait for ACK
+        response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
+        validate_ack_response(response, CommandCode.WRITE_CONFIG)
+
+        # Send remaining chunks if needed
+        for i, chunk_cmd in enumerate(chunk_cmds, start=1):
+            _LOGGER.debug(
+                "Sending config chunk %d/%d (%d bytes)",
+                i,
+                len(chunk_cmds),
+                len(chunk_cmd)
+            )
+            await self._connection.write_command(chunk_cmd)
+
+            # Wait for ACK after each chunk
+            response = await self._connection.read_response(timeout=self.TIMEOUT_ACK)
+            validate_ack_response(response, CommandCode.WRITE_CONFIG_CHUNK)
+
+        _LOGGER.info("Config written successfully to %s", self.mac_address)
+
+    def export_config_json(self, file_path: str) -> None:
+        """Export device config to JSON file.
+
+        Exports the configuration in a format compatible with the
+        Open Display Config Builder web tool.
+
+        Args:
+            file_path: Path to save JSON file
+
+        Raises:
+            ValueError: If no config loaded
+
+        Example:
+            async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+                device.export_config_json("my_config.json")
+        """
+        if not self._config:
+            raise ValueError("No config loaded - interrogate device first")
+
+        from .models import config_to_json
+        import json
+
+        data = config_to_json(self._config)
+
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        _LOGGER.info("Exported config to %s", file_path)
+
+    @staticmethod
+    def import_config_json(file_path: str) -> GlobalConfig:
+        """Import config from JSON file.
+
+        Imports configuration from a JSON file created by the
+        Open Display Config Builder web tool or exported by
+        export_config_json().
+
+        Args:
+            file_path: Path to JSON file
+
+        Returns:
+            GlobalConfig instance
+
+        Raises:
+            FileNotFoundError: If file not found
+            ValueError: If JSON invalid
+
+        Example:
+            config = OpenDisplayDevice.import_config_json("my_config.json")
+            async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+                await device.write_config(config)
+        """
+        from .models import config_from_json
+        import json
+
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+        _LOGGER.info("Imported config from %s", file_path)
+        return config_from_json(data)
 
     def _prepare_image(
         self,

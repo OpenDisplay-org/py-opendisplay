@@ -13,6 +13,7 @@ from .config import (
     SensorData,
     SystemConfig,
 )
+from .config_json import config_from_json, config_to_json
 from .enums import (
     BusType,
     ICType,
@@ -27,6 +28,8 @@ __all__ = [
     "parse_advertisement",
     "BinaryInputs",
     "BusType",
+    "config_from_json",
+    "config_to_json",
     "DataBus",
     "DeviceCapabilities",
     "DisplayConfig",
