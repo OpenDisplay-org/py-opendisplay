@@ -443,8 +443,9 @@ class OpenDisplayDevice:
         if not self._config:
             raise ValueError("No config loaded - interrogate device first")
 
-        from .models import config_to_json
         import json
+
+        from .models import config_to_json
 
         data = config_to_json(self._config)
 
@@ -476,8 +477,9 @@ class OpenDisplayDevice:
             async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
                 await device.write_config(config)
         """
-        from .models import config_from_json
         import json
+
+        from .models import config_from_json
 
         with open(file_path, 'r') as f:
             data = json.load(f)
