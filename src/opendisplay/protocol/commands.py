@@ -14,6 +14,7 @@ class CommandCode(IntEnum):
 
     # Firmware commands
     READ_FW_VERSION = 0x0043      # Read firmware version
+    REBOOT = 0x000F               # Reboot device
 
     # Image upload commands (direct write mode)
     DIRECT_WRITE_START = 0x0070   # Start direct write transfer
@@ -52,6 +53,18 @@ def build_read_fw_version_command() -> bytes:
         Command bytes: 0x0043 (2 bytes, big-endian)
     """
     return CommandCode.READ_FW_VERSION.to_bytes(2, byteorder='big')
+
+
+def build_reboot_command() -> bytes:
+    """Build command to reboot device.
+
+    The device will perform an immediate system reset and will NOT send
+    an ACK response. The BLE connection will drop when the device resets.
+
+    Returns:
+        Command bytes: 0x000F (2 bytes, big-endian)
+    """
+    return CommandCode.REBOOT.to_bytes(2, byteorder='big')
 
 
 def build_direct_write_start_compressed(

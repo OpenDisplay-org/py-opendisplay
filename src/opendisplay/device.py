@@ -28,6 +28,7 @@ from .protocol import (
     build_direct_write_start_uncompressed,
     build_read_config_command,
     build_read_fw_version_command,
+    build_reboot_command,
     parse_config_response,
     parse_firmware_version,
     validate_ack_response,
@@ -305,6 +306,35 @@ class OpenDisplayDevice:
         )
 
         return self._fw_version
+
+    async def reboot(self) -> None:
+        """Reboot the device.
+
+        Sends a reboot command to the device, which will cause an immediate
+        system reset. The device will NOT send an ACK response - it simply
+        resets after a 100ms delay.
+
+        Warning:
+            The BLE connection will be forcibly terminated when the device
+            resets. This is expected behavior. The device will restart and
+            begin advertising again after the reset completes (typically
+            within a few seconds).
+
+        Raises:
+            BLEConnectionError: If command cannot be sent
+        """
+        _LOGGER.debug("Sending reboot command to device %s", self.mac_address)
+
+        # Build and send reboot command
+        cmd = build_reboot_command()
+        await self._connection.write_command(cmd)
+
+        # Device will reset immediately - no ACK expected
+        _LOGGER.info(
+            "Reboot command sent to %s - device will reset (connection will drop)",
+            self.mac_address
+        )
+
 
     def _prepare_image(
         self,

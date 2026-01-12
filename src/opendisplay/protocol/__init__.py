@@ -13,6 +13,7 @@ from .commands import (
     build_direct_write_start_uncompressed,
     build_read_config_command,
     build_read_fw_version_command,
+    build_reboot_command,
 )
 from .config_parser import parse_config_response
 from .responses import (
@@ -29,6 +30,7 @@ __all__ = [
     "MAX_COMPRESSED_SIZE",
     "build_read_config_command",
     "build_read_fw_version_command",
+    "build_reboot_command",
     "build_direct_write_start_compressed",
     "build_direct_write_start_uncompressed",
     "build_direct_write_data_command",

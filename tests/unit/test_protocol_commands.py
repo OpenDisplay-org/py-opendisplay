@@ -9,6 +9,7 @@ from opendisplay.protocol.commands import (
     build_direct_write_start_uncompressed,
     build_read_config_command,
     build_read_fw_version_command,
+    build_reboot_command,
 )
 
 
@@ -32,6 +33,12 @@ class TestCommandBuilders:
         # Verify matches real device command
         if real_firmware_command:
             assert cmd == real_firmware_command
+
+    def test_build_reboot_command(self):
+        """Test REBOOT command builder."""
+        cmd = build_reboot_command()
+        assert len(cmd) == 2
+        assert cmd == b'\x00\x0f'  # 0x000F big-endian
 
     def test_build_direct_write_start_uncompressed(self, real_upload_start_command):
         """Test uncompressed START command matches real data."""
@@ -150,6 +157,7 @@ class TestCommandCode:
         assert CommandCode.READ_CONFIG == 0x0040
         assert CommandCode.WRITE_CONFIG == 0x0041
         assert CommandCode.READ_FW_VERSION == 0x0043
+        assert CommandCode.REBOOT == 0x000F
         assert CommandCode.DIRECT_WRITE_START == 0x0070
         assert CommandCode.DIRECT_WRITE_DATA == 0x0071
         assert CommandCode.DIRECT_WRITE_END == 0x0072

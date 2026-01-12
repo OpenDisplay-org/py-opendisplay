@@ -157,6 +157,19 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     # Git SHA: e63ae32447a83f3b64f3146999060ca1e906bf15
 ```
 
+### Rebooting the Device
+
+Remotely reboot the device (useful after configuration changes or troubleshooting):
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    await device.reboot()
+    # Device will reset after ~100ms
+    # BLE connection will drop (this is expected)
+```
+
+**Note:** The device performs an immediate system reset and does not send an ACK response. The BLE connection will be terminated when the device resets. Wait a few seconds before attempting to reconnect.
+
 ### Configuration Inspection
 
 Access detailed device configuration:
