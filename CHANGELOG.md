@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.0.0...v2.1.0) (2026-01-12)
+
+
+### Features
+
+* add device reboot command (0x000F) ([147371d](https://github.com/OpenDisplay-org/py-opendisplay/commit/147371d617e92e7cf3d425c86608641eeabeea7b))
+* **config:** add device configuration writing with JSON import/export ([4665d98](https://github.com/OpenDisplay-org/py-opendisplay/commit/4665d98eccfdc90b419f092f43d0c03a34471860))
+
 ## [2.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v1.0.0...v2.0.0) (2026-01-11)
 
 
