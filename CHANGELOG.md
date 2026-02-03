@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.1.0...v2.2.0) (2026-02-03)
+
+
+### Features
+
+* **palettes:** add automatic measured palette selection ([ae35b26](https://github.com/OpenDisplay-org/py-opendisplay/commit/ae35b26fd83fcbc65ccd8444fc29b5a258b4e865))
+
 ## [2.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.0.0...v2.1.0) (2026-01-12)
 
 
