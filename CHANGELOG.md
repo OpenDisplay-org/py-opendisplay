@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.2.0...v3.0.0) (2026-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Dithering functionality moved to standalone epaper-dithering package
+* **connection:** Removed get_device_lock from public API. The global per-device lock mechanism has been removed in favor of simpler single-instance usage pattern.
+
+### Features
+
+* add device reboot command (0x000F) ([147371d](https://github.com/OpenDisplay-org/py-opendisplay/commit/147371d617e92e7cf3d425c86608641eeabeea7b))
+* add discovery function ([2760ef9](https://github.com/OpenDisplay-org/py-opendisplay/commit/2760ef913440b8689bdc6c39d09050fc5f757b64))
+* add more dithering algorithms ([1b2fc6a](https://github.com/OpenDisplay-org/py-opendisplay/commit/1b2fc6aeef3ef6c3b81e0c23855d38a61e00a62b))
+* add sha to firmware version parsing ([a47d58e](https://github.com/OpenDisplay-org/py-opendisplay/commit/a47d58e07d20b232b65b56d74edef64477497a37))
+* **config:** add device configuration writing with JSON import/export ([4665d98](https://github.com/OpenDisplay-org/py-opendisplay/commit/4665d98eccfdc90b419f092f43d0c03a34471860))
+* **connection:** integrate bleak-retry-connector for reliable connections ([088c187](https://github.com/OpenDisplay-org/py-opendisplay/commit/088c187c32e6b6564ef5d12184dbe57976e60cf7))
+* **palettes:** add automatic measured palette selection ([ae35b26](https://github.com/OpenDisplay-org/py-opendisplay/commit/ae35b26fd83fcbc65ccd8444fc29b5a258b4e865))
+
+
+### Bug Fixes
+
+* add conftest ([673db99](https://github.com/OpenDisplay-org/py-opendisplay/commit/673db99bfa85608a2d5bcdea1a36d37b25e76b51))
+* correct advertisement data ([ec152ba](https://github.com/OpenDisplay-org/py-opendisplay/commit/ec152ba53ec7c543957db2b6f618f4485c927b68))
+* fix compressed image upload with chunking ([5d1b48a](https://github.com/OpenDisplay-org/py-opendisplay/commit/5d1b48a3ce8e7fae27526fa1d7495f81ef0bd65d)), closes [#5](https://github.com/OpenDisplay-org/py-opendisplay/issues/5)
+
+
+### Documentation
+
+* add git commit SHA documentation ([0e2ef50](https://github.com/OpenDisplay-org/py-opendisplay/commit/0e2ef50b7b813e87aceaa7620e7759325dcce0e7))
+* improve README.md ([e90a612](https://github.com/OpenDisplay-org/py-opendisplay/commit/e90a6128fe20b1bbbfcbaa0b303c72e8ab5359d8))
+
+
+### Code Refactoring
+
+* extract dithering to epaper-dithering package ([95aa3c1](https://github.com/OpenDisplay-org/py-opendisplay/commit/95aa3c1700cad438b36146443e01f1fb8bcb00f3))
+
 ## [2.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.1.0...v2.2.0) (2026-02-03)
 
 
