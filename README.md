@@ -91,6 +91,36 @@ Upload your image and compare the visual results before choosing an algorithm.
 | Heavy / Rarely Worth It | `stucki`, `jarvis-judice-ninke` |
 | Stylized / High Contrast | `atkinson` |
 
+## Color Palettes
+
+py-opendisplay automatically selects the best color palette for your display based on its hardware specifications.
+
+### Measured vs Theoretical Palettes
+
+**Measured Palettes** (default): Use actual measured color values from physical e-paper displays for more accurate color reproduction. These palettes are calibrated for specific display models:
+- Spectra 7.3" 6-color (ep73_spectra_800x480)
+- 4.26" Monochrome (ep426_800x480)
+- Solum 2.6" BWR (ep26r_152x296)
+
+**Theoretical Palettes**: Use ideal RGB color values (pure black, white, red, etc.) from the ColorScheme specification.
+
+### Disabling Measured Palettes
+
+If you want to force the use of theoretical ColorScheme palettes instead of measured palettes (useful for testing or comparison):
+
+```python
+from opendisplay import OpenDisplayDevice
+
+# Use theoretical ColorScheme palettes instead of measured palettes
+async with OpenDisplayDevice(
+    mac_address="AA:BB:CC:DD:EE:FF",
+    use_measured_palettes=False
+) as device:
+    await device.upload_image(image)
+```
+
+By default, `use_measured_palettes=True` and the library will automatically use measured palettes when available, falling back to theoretical palettes for unknown displays.
+
 ## Refresh Modes
 
 Control how the display updates when uploading images:

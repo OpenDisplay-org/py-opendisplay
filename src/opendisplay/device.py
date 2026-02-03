@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from epaper_dithering import ColorScheme, DitherMode, dither_image
 from PIL import Image
 
+from .display_palettes import get_palette_for_display
 from .encoding import (
     compress_image_data,
     encode_bitplanes,
@@ -62,6 +63,10 @@ class OpenDisplayDevice:
         caps = DeviceCapabilities(296, 128, ColorScheme.BWR, 0)
         async with OpenDisplayDevice(mac, capabilities=caps) as device:
             await device.upload_image(image)
+
+        # Use theoretical ColorScheme instead of measured palettes
+        async with OpenDisplayDevice(mac, use_measured_palettes=False) as device:
+            await device.upload_image(image)
     """
 
     # BLE operation timeouts (seconds)
@@ -81,6 +86,7 @@ class OpenDisplayDevice:
             discovery_timeout: float = 10.0,
             max_attempts: int = 4,
             use_services_cache: bool = True,
+            use_measured_palettes: bool = True,
     ):
         """Initialize OpenDisplay device.
 
@@ -94,6 +100,7 @@ class OpenDisplayDevice:
             discovery_timeout: Timeout for name resolution scan (default: 10)
             max_attempts: Maximum connection attempts for bleak-retry-connector (default: 4)
             use_services_cache: Enable GATT service caching for faster reconnections (default: True)
+            use_measured_palettes: Use measured color palettes when available (default: True)
 
         Raises:
             ValueError: If neither or both mac_address and device_name provided
@@ -119,6 +126,7 @@ class OpenDisplayDevice:
         self._timeout = timeout
         self._max_attempts = max_attempts
         self._use_services_cache = use_services_cache
+        self._use_measured_palettes = use_measured_palettes
 
         # Will be set after resolution
         self.mac_address = mac_address or ""  # Resolved in __aenter__
@@ -516,8 +524,9 @@ class OpenDisplayDevice:
             )
             image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
 
-        # Apply dithering
-        dithered = dither_image(image, self.color_scheme, mode=dither_mode)
+        panel_ic_type = self._config.displays[0].panel_ic_type if self._config and self._config.displays else None
+        palette = get_palette_for_display(panel_ic_type, self.color_scheme, self._use_measured_palettes)
+        dithered = dither_image(image, palette, mode=dither_mode)
 
         # Encode to device format
         if self.color_scheme in (ColorScheme.BWR, ColorScheme.BWY):
