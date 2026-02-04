@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.2.0...v2.3.0) (2026-02-04)
+
+
+### Features
+
+* **epaper-dithering:** bump version for corrected palette ([2a2d5ff](https://github.com/OpenDisplay-org/py-opendisplay/commit/2a2d5ff7a72b7cb49d54ab82581275af591df67f))
+
 ## [2.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.1.0...v2.2.0) (2026-02-03)
 
 
