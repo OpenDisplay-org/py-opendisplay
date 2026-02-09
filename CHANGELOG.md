@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.3.0...v2.4.0) (2026-02-09)
+
+
+### Features
+
+* bump epaper-dithering version to 0.5.1 ([9ff01ba](https://github.com/OpenDisplay-org/py-opendisplay/commit/9ff01bad1620937cac7d671a23037cbfa81451b9))
+
 ## [2.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.2.0...v2.3.0) (2026-02-04)
 
 
