@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.4.0...v2.5.0) (2026-02-11)
+
+
+### Features
+
+* bump epaper-dithering version and expose tone compression option ([c7d3dd1](https://github.com/OpenDisplay-org/py-opendisplay/commit/c7d3dd1cde26c81883793686e019360741004039))
+
 ## [2.4.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.3.0...v2.4.0) (2026-02-09)
 
 
