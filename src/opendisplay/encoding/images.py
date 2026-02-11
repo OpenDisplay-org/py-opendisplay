@@ -1,4 +1,4 @@
-"""Image encoding for e-paper displays."""
+"""Image encoding and preprocessing for e-paper displays."""
 
 from __future__ import annotations
 
@@ -6,9 +6,60 @@ import logging
 
 import numpy as np
 from epaper_dithering import ColorScheme
-from PIL import Image
+from PIL import Image, ImageOps
+
+from ..models.enums import FitMode
 
 _LOGGER = logging.getLogger(__name__)
+
+# Fill color for CONTAIN and CROP padding (white, natural for e-paper)
+_PAD_COLOR = (255, 255, 255)
+
+
+def fit_image(
+    image: Image.Image,
+    target_size: tuple[int, int],
+    fit: FitMode,
+) -> Image.Image:
+    """Fit an image to target dimensions using the specified strategy.
+
+    Args:
+        image: Source PIL Image
+        target_size: (width, height) of the display
+        fit: Fit strategy to apply
+
+    Returns:
+        Image with exact target dimensions
+    """
+    if fit == FitMode.STRETCH:
+        return image.resize(target_size, Image.Resampling.LANCZOS)
+
+    if fit == FitMode.CONTAIN:
+        return ImageOps.pad(image, target_size, Image.Resampling.LANCZOS, color=_PAD_COLOR)
+
+    if fit == FitMode.COVER:
+        return ImageOps.fit(image, target_size, Image.Resampling.LANCZOS)
+
+    if fit == FitMode.CROP:
+        tw, th = target_size
+        sw, sh = image.size
+
+        # Crop region from source (centered, clamped to target size)
+        crop_w, crop_h = min(sw, tw), min(sh, th)
+        left = (sw - crop_w) // 2
+        top = (sh - crop_h) // 2
+        cropped = image.crop((left, top, left + crop_w, top + crop_h))
+
+        # Paste centered onto white canvas if padding needed
+        if crop_w == tw and crop_h == th:
+            return cropped
+        canvas = Image.new("RGB", target_size, _PAD_COLOR)
+        paste_x = (tw - crop_w) // 2
+        paste_y = (th - crop_h) // 2
+        canvas.paste(cropped, (paste_x, paste_y))
+        return canvas
+
+    raise ValueError(f"Unknown fit mode: {fit}")
 
 
 def encode_image(

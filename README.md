@@ -37,13 +37,36 @@ async with OpenDisplayDevice(device_name="OpenDisplay-A123") as device:
   await device.upload_image(image)
 ```
 
-## Image Resizing
+## Image Fitting
 
-Images are automatically resized to match the display dimensions. A warning is logged if resizing occurs:
+Images are automatically fitted to the display dimensions. Control how aspect ratio mismatches are handled with the `fit` parameter:
 
-- WARNING:opendisplay.device:Resizing image from 1920x1080 to 296x128
+```python
+from opendisplay import OpenDisplayDevice, FitMode
+from PIL import Image
 
-For best results, resize images to the exact display dimensions before uploading.
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    image = Image.open("photo.jpg")
+
+    # Default: scale to fit, pad with white (no distortion, no cropping)
+    await device.upload_image(image, fit=FitMode.CONTAIN)
+
+    # Scale to cover display, crop overflow (no distortion, fills display)
+    await device.upload_image(image, fit=FitMode.COVER)
+
+    # Distort to fill exact dimensions
+    await device.upload_image(image, fit=FitMode.STRETCH)
+
+    # No scaling, center-crop at native resolution (pad if smaller)
+    await device.upload_image(image, fit=FitMode.CROP)
+```
+
+| Mode                | Aspect Ratio | Fills Display          | Content Loss            |
+|---------------------|--------------|------------------------|-------------------------|
+| `CONTAIN` (default) | Preserved    | No (white padding)     | None                    |
+| `COVER`             | Preserved    | Yes                    | Edges cropped           |
+| `STRETCH`           | Distorted    | Yes                    | None (but distorted)    |
+| `CROP`              | Preserved    | Depends on source size | Edges cropped if larger |
 
 ## Dithering Algorithms
 
@@ -84,12 +107,12 @@ Upload your image and compare the visual results before choosing an algorithm.
 
 **Quality vs Speed Tradeoff:**
 
-| Category | Algorithms |
-|--------|------------|
-| Fastest / Lowest Cost | `none`, `ordered`, `sierra-lite` |
-| Best Cost-to-Quality | `floyd-steinberg`, `burkes`, `sierra` |
-| Heavy / Rarely Worth It | `stucki`, `jarvis-judice-ninke` |
-| Stylized / High Contrast | `atkinson` |
+| Category                 | Algorithms                            |
+|--------------------------|---------------------------------------|
+| Fastest / Lowest Cost    | `none`, `ordered`, `sierra-lite`      |
+| Best Cost-to-Quality     | `floyd-steinberg`, `burkes`, `sierra` |
+| Heavy / Rarely Worth It  | `stucki`, `jarvis-judice-ninke`       |
+| Stylized / High Contrast | `atkinson`                            |
 
 ## Color Palettes
 
@@ -152,10 +175,10 @@ await device.upload_image(
 
 ### Available Modes
 
-| Mode | Description |
-|---|---|
+| Mode               | Description                                                                                              |
+|--------------------|----------------------------------------------------------------------------------------------------------|
 | `RefreshMode.FULL` | Full display refresh \(default\). Cleanest image quality; eliminates ghosting; slower \(~5–15 seconds\). |
-| `RefreshMode.FAST` | Fast refresh. Quicker updates; may show slight ghosting. Only supported on some B/W displays. |
+| `RefreshMode.FAST` | Fast refresh. Quicker updates; may show slight ghosting. Only supported on some B/W displays.            |
 
 Note: Fast refresh support varies by display hardware. Color and grayscale displays only support full refresh.
 

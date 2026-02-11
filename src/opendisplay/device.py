@@ -13,11 +13,12 @@ from .encoding import (
     compress_image_data,
     encode_bitplanes,
     encode_image,
+    fit_image,
 )
 from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
-from .models.enums import RefreshMode
+from .models.enums import FitMode, RefreshMode
 from .models.firmware import FirmwareVersion
 from .protocol import (
     CHUNK_SIZE,
@@ -501,30 +502,32 @@ class OpenDisplayDevice:
         dither_mode: DitherMode,
         compress: bool,
         tone_compression: float | str = "auto",
+        fit: FitMode = FitMode.STRETCH,
     ) -> tuple[bytes, bytes | None]:
         """Prepare image for upload.
 
-        Handles resizing, dithering, encoding, and optional compression.
+        Handles fitting, dithering, encoding, and optional compression.
 
         Args:
             image: PIL Image to prepare
             dither_mode: Dithering algorithm to use
             compress: Whether to compress the image data
             tone_compression: Dynamic range compression ("auto", or 0.0-1.0)
+            fit: How to map the image to display dimensions
 
         Returns:
             Tuple of (uncompressed_data, compressed_data or None)
         """
-        # Resize image to display dimensions
-        if image.size != (self.width, self.height):
-            _LOGGER.warning(
-                "Resizing image from %dx%d to %dx%d (device display size)",
-                image.width,
-                image.height,
-                self.width,
-                self.height,
+        target_size = (self.width, self.height)
+
+        if image.size != target_size:
+            _LOGGER.info(
+                "Fitting image %dx%d -> %dx%d (mode: %s)",
+                image.width, image.height,
+                self.width, self.height,
+                fit.name,
             )
-            image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+            image = fit_image(image, target_size, fit)
 
         panel_ic_type = (
             self._config.displays[0].panel_ic_type
@@ -565,11 +568,12 @@ class OpenDisplayDevice:
             dither_mode: DitherMode = DitherMode.BURKES,
             compress: bool = True,
             tone_compression: float | str = "auto",
+            fit: FitMode = FitMode.CONTAIN,
     ) -> None:
         """Upload image to device display.
 
         Automatically handles:
-        - Image resizing to display dimensions
+        - Image fitting to display dimensions
         - Dithering based on color scheme
         - Encoding to device format
         - Compression
@@ -584,6 +588,11 @@ class OpenDisplayDevice:
                 "auto" = analyze image and fit to display range.
                 0.0 = disabled, 0.0-1.0 = fixed linear compression.
                 Only applies to measured palettes.
+            fit: How to map the image to display dimensions (default: CONTAIN).
+                STRETCH - distort to fill exact dimensions
+                CONTAIN - scale to fit, pad with white
+                COVER - scale to cover, crop overflow
+                CROP - center-crop at native resolution, pad if smaller
 
         Raises:
             RuntimeError: If device not interrogated/configured
@@ -602,8 +611,10 @@ class OpenDisplayDevice:
             self.color_scheme.name,
         )
 
-        # Prepare image (resize, dither, encode, compress)
-        image_data, compressed_data = self._prepare_image(image, dither_mode, compress, tone_compression)
+        # Prepare image (fit, dither, encode, compress)
+        image_data, compressed_data = self._prepare_image(
+            image, dither_mode, compress, tone_compression, fit
+        )
 
         # Choose protocol based on compression and size
         if compress and compressed_data and len(compressed_data) < MAX_COMPRESSED_SIZE:

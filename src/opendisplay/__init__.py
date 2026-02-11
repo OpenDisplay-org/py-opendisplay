@@ -31,6 +31,7 @@ from .models.config import (
 )
 from .models.enums import (
     BusType,
+    FitMode,
     ICType,
     PowerMode,
     RefreshMode,
@@ -68,6 +69,7 @@ __all__ = [
     # Enums
     "ColorScheme",
     "DitherMode",
+    "FitMode",
     "RefreshMode",
     "ICType",
     "PowerMode",

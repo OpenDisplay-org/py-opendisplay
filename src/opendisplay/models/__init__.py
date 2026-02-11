@@ -16,6 +16,7 @@ from .config import (
 from .config_json import config_from_json, config_to_json
 from .enums import (
     BusType,
+    FitMode,
     ICType,
     PowerMode,
     RefreshMode,
@@ -34,6 +35,7 @@ __all__ = [
     "DeviceCapabilities",
     "DisplayConfig",
     "FirmwareVersion",
+    "FitMode",
     "GlobalConfig",
     "ICType",
     "LedConfig",
