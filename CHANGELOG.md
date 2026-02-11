@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.5.1...v3.0.0) (2026-02-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* add FitMode image fitting strategies (contain, cover, crop, stretch)
+
+### Features
+
+* add FitMode image fitting strategies (contain, cover, crop, stretch) ([786c614](https://github.com/OpenDisplay-org/py-opendisplay/commit/786c6144f6524f75ddb90013fa15c0d06dd1ad7f))
+
 ## [2.5.1](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.5.0...v2.5.1) (2026-02-11)
 
 
