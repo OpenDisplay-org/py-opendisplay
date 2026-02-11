@@ -121,6 +121,22 @@ async with OpenDisplayDevice(
 
 By default, `use_measured_palettes=True` and the library will automatically use measured palettes when available, falling back to theoretical palettes for unknown displays.
 
+### Tone Compression
+
+E-paper displays can't reproduce the full luminance range of digital images. Tone compression remaps image luminance to the display's actual range before dithering, producing smoother results. It is enabled by default and only applies when using measured palettes.
+
+```python
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Default: full tone compression (recommended)
+    await device.upload_image(image)
+
+    # Disable tone compression
+    await device.upload_image(image, tone_compression=0.0)
+
+    # Partial compression
+    await device.upload_image(image, tone_compression=0.5)
+```
+
 ## Refresh Modes
 
 Control how the display updates when uploading images:
@@ -130,7 +146,7 @@ from opendisplay import RefreshMode
 
 await device.upload_image(
     image,
-    refresh_mode=RefreshMode.FULL  # Options: FULL, FAST, PARTIAL, PARTIAL2
+    refresh_mode=RefreshMode.FULL  # Options: FULL, FAST
 )
 ```
 
@@ -139,11 +155,9 @@ await device.upload_image(
 | Mode | Description |
 |---|---|
 | `RefreshMode.FULL` | Full display refresh \(default\). Cleanest image quality; eliminates ghosting; slower \(~5–15 seconds\). |
-| `RefreshMode.FAST` | Fast partial refresh. Quicker updates; may show slight ghosting. |
-| `RefreshMode.PARTIAL` | Partial refresh mode 2. |
-| `RefreshMode.PARTIAL2` | Partial refresh mode 3. |
+| `RefreshMode.FAST` | Fast refresh. Quicker updates; may show slight ghosting. Only supported on some B/W displays. |
 
-Note: Partial refresh support varies by display hardware. Check [device capabilities](https://opendisplay.org/firmware/seeed_display_compatibility.html) for supported modes.
+Note: Fast refresh support varies by display hardware. Color and grayscale displays only support full refresh.
 
 ## Advanced Features
 

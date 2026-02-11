@@ -17,15 +17,11 @@ class TestRefreshMode:
         """Test all refresh modes have correct values."""
         assert RefreshMode.FULL == 0
         assert RefreshMode.FAST == 1
-        assert RefreshMode.PARTIAL == 2
-        assert RefreshMode.PARTIAL2 == 3
 
     def test_refresh_mode_names(self):
         """Test refresh mode names."""
         assert RefreshMode.FULL.name == "FULL"
         assert RefreshMode.FAST.name == "FAST"
-        assert RefreshMode.PARTIAL.name == "PARTIAL"
-        assert RefreshMode.PARTIAL2.name == "PARTIAL2"
 
 
 

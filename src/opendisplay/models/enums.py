@@ -4,11 +4,12 @@ from enum import IntEnum
 
 
 class RefreshMode(IntEnum):
-    """Display refresh modes."""
+    """Display refresh modes.
+
+    Only FULL and FAST are supported by the firmware.
+    """
     FULL = 0
     FAST = 1
-    PARTIAL = 2
-    PARTIAL2 = 3
 
 
 class ICType(IntEnum):

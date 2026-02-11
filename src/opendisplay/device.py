@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from epaper_dithering import ColorScheme, DitherMode, dither_image
 from PIL import Image
 
-from .display_palettes import get_palette_for_display
+from .display_palettes import PANELS_4GRAY, get_palette_for_display
 from .encoding import (
     compress_image_data,
     encode_bitplanes,
@@ -500,6 +500,7 @@ class OpenDisplayDevice:
         image: Image.Image,
         dither_mode: DitherMode,
         compress: bool,
+        tone_compression: float | str = "auto",
     ) -> tuple[bytes, bytes | None]:
         """Prepare image for upload.
 
@@ -509,6 +510,7 @@ class OpenDisplayDevice:
             image: PIL Image to prepare
             dither_mode: Dithering algorithm to use
             compress: Whether to compress the image data
+            tone_compression: Dynamic range compression ("auto", or 0.0-1.0)
 
         Returns:
             Tuple of (uncompressed_data, compressed_data or None)
@@ -525,8 +527,14 @@ class OpenDisplayDevice:
             image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
 
         panel_ic_type = self._config.displays[0].panel_ic_type if self._config and self._config.displays else None
+        if self.color_scheme == ColorScheme.GRAYSCALE_4 and panel_ic_type is not None and panel_ic_type not in PANELS_4GRAY:
+            _LOGGER.warning(
+                "Panel IC 0x%04x is not a known 4-gray panel. "
+                "GRAYSCALE_4 encoding may not display correctly.",
+                panel_ic_type,
+            )
         palette = get_palette_for_display(panel_ic_type, self.color_scheme, self._use_measured_palettes)
-        dithered = dither_image(image, palette, mode=dither_mode)
+        dithered = dither_image(image, palette, mode=dither_mode, tone_compression=tone_compression)
 
         # Encode to device format
         if self.color_scheme in (ColorScheme.BWR, ColorScheme.BWY):
@@ -548,6 +556,7 @@ class OpenDisplayDevice:
             refresh_mode: RefreshMode = RefreshMode.FULL,
             dither_mode: DitherMode = DitherMode.BURKES,
             compress: bool = True,
+            tone_compression: float | str = "auto",
     ) -> None:
         """Upload image to device display.
 
@@ -563,6 +572,10 @@ class OpenDisplayDevice:
             refresh_mode: Display refresh mode (default: FULL)
             dither_mode: Dithering algorithm (default: BURKES)
             compress: Enable zlib compression (default: True)
+            tone_compression: Dynamic range compression (default: "auto").
+                "auto" = analyze image and fit to display range.
+                0.0 = disabled, 0.0-1.0 = fixed linear compression.
+                Only applies to measured palettes.
 
         Raises:
             RuntimeError: If device not interrogated/configured
@@ -582,7 +595,7 @@ class OpenDisplayDevice:
         )
 
         # Prepare image (resize, dither, encode, compress)
-        image_data, compressed_data = self._prepare_image(image, dither_mode, compress)
+        image_data, compressed_data = self._prepare_image(image, dither_mode, compress, tone_compression)
 
         # Choose protocol based on compression and size
         if compress and compressed_data and len(compressed_data) < MAX_COMPRESSED_SIZE:

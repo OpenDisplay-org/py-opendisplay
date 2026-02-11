@@ -1,4 +1,4 @@
-"""Automatic measured palette selection for e-paper displays."""
+"""Automatic measured palette selection and panel capability data for e-paper displays."""
 
 from epaper_dithering import (
     MONO_4_26,
@@ -7,6 +7,17 @@ from epaper_dithering import (
     ColorPalette,
     ColorScheme,
 )
+
+# Panel IDs that support 4-gray mode (from firmware mapEpd)
+PANELS_4GRAY: frozenset[int] = frozenset({
+    0x0008,  # EP295_128x296_4GRAY
+    0x0015,  # EP75_800x480_4GRAY
+    0x0018,  # EP29_128x296_4GRAY
+    0x0028,  # EP426_800x480_4GRAY
+    0x002F,  # EP29Z_128x296_4GRAY
+    0x0031,  # EP213Z_122x250_4GRAY
+    0x003C,  # EP75_800x480_4GRAY_GEN2
+})
 
 # Map: (panel_ic_type, color_scheme) -> measured ColorPalette
 # panel_ic_type identifies the e-paper panel model
