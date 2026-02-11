@@ -526,8 +526,16 @@ class OpenDisplayDevice:
             )
             image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
 
-        panel_ic_type = self._config.displays[0].panel_ic_type if self._config and self._config.displays else None
-        if self.color_scheme == ColorScheme.GRAYSCALE_4 and panel_ic_type is not None and panel_ic_type not in PANELS_4GRAY:
+        panel_ic_type = (
+            self._config.displays[0].panel_ic_type
+            if self._config and self._config.displays
+            else None
+        )
+        if (
+            self.color_scheme == ColorScheme.GRAYSCALE_4
+            and panel_ic_type is not None
+            and panel_ic_type not in PANELS_4GRAY
+        ):
             _LOGGER.warning(
                 "Panel IC 0x%04x is not a known 4-gray panel. "
                 "GRAYSCALE_4 encoding may not display correctly.",
