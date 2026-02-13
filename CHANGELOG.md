@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.1.0...v3.2.0) (2026-02-13)
+
+
+### Features
+
+* add display diagonal inches computed property ([538a604](https://github.com/OpenDisplay-org/py-opendisplay/commit/538a6041f5f4dd383204a7ebfac25879b554e581))
+
 ## [3.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.0.0...v3.1.0) (2026-02-13)
 
 
