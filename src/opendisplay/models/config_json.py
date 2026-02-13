@@ -237,7 +237,8 @@ def config_from_json(data: dict) -> GlobalConfig:
         GlobalConfig instance
 
     Raises:
-        ValueError: If required packets are missing or packet structure is invalid
+        ValueError: If required packets (including at least one display) are missing
+            or packet structure is invalid
     """
     system: SystemConfig | None = None
     manufacturer: ManufacturerData | None = None
@@ -371,6 +372,8 @@ def config_from_json(data: dict) -> GlobalConfig:
         missing_required.append("manufacturer")
     if power is None:
         missing_required.append("power")
+    if not displays:
+        missing_required.append("display")
     if missing_required:
         raise ValueError(
             "Missing required packet(s): " + ", ".join(missing_required)

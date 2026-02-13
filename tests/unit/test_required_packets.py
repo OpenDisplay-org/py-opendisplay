@@ -8,6 +8,7 @@ import pytest
 
 from opendisplay import OpenDisplayDevice
 from opendisplay.exceptions import ConfigParseError
+from opendisplay.models import config_from_json
 from opendisplay.models.config import (
     GlobalConfig,
     ManufacturerData,
@@ -38,11 +39,16 @@ def _packet(number: int, packet_type: int, payload: bytes) -> bytes:
     return bytes([number, packet_type]) + payload
 
 
+def _display_payload() -> bytes:
+    return b"\x00" * 46
+
+
 def _required_tlv(
     *,
     include_system: bool = True,
     include_manufacturer: bool = True,
     include_power: bool = True,
+    include_display: bool = True,
 ) -> bytes:
     parts: list[bytes] = []
     packet_number = 0
@@ -55,6 +61,9 @@ def _required_tlv(
         packet_number += 1
     if include_power:
         parts.append(_packet(packet_number, 0x04, _power_payload()))
+        packet_number += 1
+    if include_display:
+        parts.append(_packet(packet_number, 0x20, _display_payload()))
 
     return b"".join(parts)
 
@@ -74,6 +83,42 @@ def test_parse_tlv_succeeds_when_required_packets_present() -> None:
     assert cfg.system.ic_type == 1
     assert cfg.manufacturer.manufacturer_id == 1
     assert cfg.power.power_mode == 1
+    assert len(cfg.displays) == 1
+
+
+def test_parse_tlv_requires_display() -> None:
+    """Parser should fail when display packet is missing."""
+    data = _required_tlv(include_display=False)
+
+    with pytest.raises(ConfigParseError, match="Missing required packet\\(s\\): display"):
+        parse_tlv_config(data)
+
+
+def _required_json(*, include_display: bool = True) -> dict:
+    packets = [
+        {"id": "1", "fields": {}},
+        {"id": "2", "fields": {}},
+        {"id": "4", "fields": {}},
+    ]
+    if include_display:
+        packets.append({"id": "32", "fields": {}})
+    return {"version": 1, "minor_version": 1, "packets": packets}
+
+
+def test_config_from_json_requires_display() -> None:
+    """JSON import should fail when display packet is missing."""
+    with pytest.raises(ValueError, match="Missing required packet\\(s\\): display"):
+        config_from_json(_required_json(include_display=False))
+
+
+def test_config_from_json_succeeds_when_display_present() -> None:
+    """JSON import should succeed when required packets and a display are present."""
+    cfg = config_from_json(_required_json(include_display=True))
+
+    assert cfg.system.ic_type == 0
+    assert cfg.manufacturer.manufacturer_id == 0
+    assert cfg.power.power_mode == 0
+    assert len(cfg.displays) == 1
 
 
 def _minimal_system() -> SystemConfig:

@@ -167,6 +167,8 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
         missing_required.append("manufacturer")
     if power is None:
         missing_required.append("power")
+    if not displays:
+        missing_required.append("display")
     if missing_required:
         raise ConfigParseError(
             "Missing required packet(s): " + ", ".join(missing_required)

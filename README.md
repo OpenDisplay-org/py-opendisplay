@@ -244,7 +244,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 ```
 
 **Note:** Many configuration changes (rotation, pin assignments, IC type) require a device reboot to take effect.
-`write_config()` requires the core packets `system`, `manufacturer`, and `power` plus at least one display.
+`write_config()` requires `system`, `manufacturer`, `power`, and at least one display.
 
 #### JSON Import/Export
 
@@ -264,7 +264,7 @@ async with OpenDisplayDevice(mac_address="BB:CC:DD:EE:FF:00") as device:
     await device.reboot()
 ```
 
-`import_config_json()` raises `ValueError` if required packets (`system`, `manufacturer`, `power`) are missing.
+`import_config_json()` raises `ValueError` if required packets (`system`, `manufacturer`, `power`) or all display packets are missing.
 
 ### Rebooting the Device
 
