@@ -265,7 +265,7 @@ class DisplayConfig:
     def color_scheme_enum(self) -> ColorScheme | int:
         """Get color scheme as enum, or raw int if unknown."""
         try:
-            return ColorScheme(self.color_scheme)
+            return ColorScheme.from_value(self.color_scheme)
         except ValueError:
             return self.color_scheme
 

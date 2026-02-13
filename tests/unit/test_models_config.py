@@ -56,6 +56,22 @@ class TestDisplayConfigScreenDiagonal:
         assert display.screen_diagonal_inches is None
 
 
+class TestDisplayConfigColorScheme:
+    """Test DisplayConfig.color_scheme_enum."""
+
+    def test_returns_enum_for_known_color_scheme(self):
+        display = _display_config(active_width_mm=120, active_height_mm=90)
+        display.color_scheme = 0
+
+        assert display.color_scheme_enum.name == "MONO"
+
+    def test_returns_raw_int_for_unknown_color_scheme(self):
+        display = _display_config(active_width_mm=120, active_height_mm=90)
+        display.color_scheme = 99
+
+        assert display.color_scheme_enum == 99
+
+
 class TestManufacturerDataBoardTyping:
     """Test ManufacturerData board typing and names."""
 
