@@ -244,6 +244,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 ```
 
 **Note:** Many configuration changes (rotation, pin assignments, IC type) require a device reboot to take effect.
+`write_config()` requires the core packets `system`, `manufacturer`, and `power` plus at least one display.
 
 #### JSON Import/Export
 
@@ -262,6 +263,8 @@ async with OpenDisplayDevice(mac_address="BB:CC:DD:EE:FF:00") as device:
     await device.write_config(config)
     await device.reboot()
 ```
+
+`import_config_json()` raises `ValueError` if required packets (`system`, `manufacturer`, `power`) are missing.
 
 ### Rebooting the Device
 
@@ -290,16 +293,15 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
         print(f"Manufacturer: {manufacturer.name}")
     else:
         print(f"Manufacturer ID (unknown): {manufacturer}")
-    if device.config.manufacturer:
-        mfg = device.config.manufacturer
-        print(f"Manufacturer slug: {mfg.manufacturer_name or f'unknown({mfg.manufacturer_id})'}")
-        print(f"Board model: {mfg.board_type_name or f'unknown({mfg.board_type})'}")
-        print(f"Board revision: {mfg.board_revision}")
+    mfg = device.config.manufacturer
+    print(f"Manufacturer slug: {mfg.manufacturer_name or f'unknown({mfg.manufacturer_id})'}")
+    print(f"Board model: {mfg.board_type_name or f'unknown({mfg.board_type})'}")
+    print(f"Board revision: {mfg.board_revision}")
 
     # Display configuration
     display = device.config.displays[0]
     print(f"Panel IC: {display.panel_ic_type}")
-    print(f"Rotation: {display.rotation}°")
+    print(f"Rotation: {display.rotation}")
     print(f"Diagonal: {display.screen_diagonal_inches:.1f}\"" if display.screen_diagonal_inches is not None else "Diagonal: unknown")
     print(f"Supports ZIP: {display.supports_zip}")
     print(f"Supports Direct Write: {display.supports_direct_write}")
@@ -310,10 +312,9 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     print(f"Has external power pin: {system.has_pwr_pin}")
 
     # Power configuration
-    if device.config.power:
-        power = device.config.power
-        print(f"Battery: {power.battery_mah}mAh")
-        print(f"Power mode: {power.power_mode_enum.name}")
+    power = device.config.power
+    print(f"Battery: {power.battery_mah}mAh")
+    print(f"Power mode: {power.power_mode_enum.name}")
 ```
 ### Advertisement Parsing
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from epaper_dithering import ColorScheme
 
@@ -470,9 +470,9 @@ class GlobalConfig:
     Corresponds to GlobalConfig struct in firmware.
     """
     # Required single-instance packets
-    system: Optional[SystemConfig] = None
-    manufacturer: Optional[ManufacturerData] = None
-    power: Optional[PowerOption] = None
+    system: SystemConfig
+    manufacturer: ManufacturerData
+    power: PowerOption
 
     # Optional repeatable packets (max 4 each)
     displays: list[DisplayConfig] = field(default_factory=list)

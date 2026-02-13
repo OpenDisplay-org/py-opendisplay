@@ -71,9 +71,9 @@ def test_parse_tlv_succeeds_when_required_packets_present() -> None:
     """Parser should succeed when all required packets are present."""
     cfg = parse_tlv_config(_required_tlv())
 
-    assert cfg.system is not None
-    assert cfg.manufacturer is not None
-    assert cfg.power is not None
+    assert cfg.system.ic_type == 1
+    assert cfg.manufacturer.manufacturer_id == 1
+    assert cfg.power.power_mode == 1
 
 
 def _minimal_system() -> SystemConfig:
@@ -117,9 +117,14 @@ def _minimal_power() -> PowerOption:
 async def test_write_config_requires_system_manufacturer_power() -> None:
     """Write path should fail when required packets are missing."""
     device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF")
+    cfg = GlobalConfig(
+        system=_minimal_system(),
+        manufacturer=None,  # type: ignore[arg-type]
+        power=None,  # type: ignore[arg-type]
+    )
 
     with pytest.raises(ValueError, match="Config missing required packets: manufacturer, power"):
-        await device.write_config(GlobalConfig(system=_minimal_system()))
+        await device.write_config(cfg)
 
 
 @pytest.mark.asyncio

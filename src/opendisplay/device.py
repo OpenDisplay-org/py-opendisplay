@@ -212,8 +212,6 @@ class OpenDisplayDevice:
             raise RuntimeError(
                 "Device config unknown - interrogate first or provide config"
             )
-        if not self._config.manufacturer:
-            raise RuntimeError("Device config missing manufacturer data")
         return self._config.manufacturer.manufacturer_id_enum
 
     @property
@@ -256,7 +254,7 @@ class OpenDisplayDevice:
             Unknown future values as raw int.
 
         Raises:
-            RuntimeError: If config or manufacturer packet is missing.
+            RuntimeError: If config is missing.
         """
         return self._ensure_manufacturer_data()
 
@@ -266,14 +264,12 @@ class OpenDisplayDevice:
         Requires config to be available via interrogation or constructor.
 
         Raises:
-            RuntimeError: If config or manufacturer packet is missing.
+            RuntimeError: If config is missing.
         """
         if not self._config:
             raise RuntimeError(
                 "Device config unknown - interrogate first or provide config"
             )
-        if not self._config.manufacturer:
-            raise RuntimeError("Device config missing manufacturer data")
         return self._config.manufacturer.board_type
 
     def get_board_type_name(self) -> str | None:
@@ -282,14 +278,12 @@ class OpenDisplayDevice:
         Requires config to be available via interrogation or constructor.
 
         Raises:
-            RuntimeError: If config or manufacturer packet is missing.
+            RuntimeError: If config is missing.
         """
         if not self._config:
             raise RuntimeError(
                 "Device config unknown - interrogate first or provide config"
             )
-        if not self._config.manufacturer:
-            raise RuntimeError("Device config missing manufacturer data")
         return self._config.manufacturer.board_type_name
 
     async def interrogate(self) -> GlobalConfig:
@@ -433,16 +427,19 @@ class OpenDisplayDevice:
         """
         _LOGGER.debug("Writing config to device %s", self.mac_address)
 
-        # Validate required packets
-        missing_packets = []
-        if not config.system:
-            missing_packets.append("system")
-        if not config.manufacturer:
-            missing_packets.append("manufacturer")
-        if not config.power:
-            missing_packets.append("power")
-
-        if missing_packets:
+        # Defensive runtime validation for callers that bypass typing.
+        if (
+            config.system is None
+            or config.manufacturer is None
+            or config.power is None
+        ):
+            missing_packets = []
+            if config.system is None:
+                missing_packets.append("system")
+            if config.manufacturer is None:
+                missing_packets.append("manufacturer")
+            if config.power is None:
+                missing_packets.append("power")
             raise ValueError(
                 f"Config missing required packets: {', '.join(missing_packets)}"
             )

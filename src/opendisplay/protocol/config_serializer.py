@@ -407,22 +407,22 @@ def serialize_config(config: GlobalConfig) -> bytes:
     Raises:
         ValueError: If config exceeds maximum size (4096 bytes)
     """
+    if config.system is None or config.manufacturer is None or config.power is None:
+        raise ValueError("Config is missing required packets")
+
     # Start with 2 bytes padding and 1 byte version
     packet_data = b"\x00\x00"  # 2 bytes padding
     packet_data += bytes([config.version])  # 1 byte version
 
     # Serialize single-instance packets
-    if config.system:
-        packet_data += bytes([0, PACKET_TYPE_SYSTEM])
-        packet_data += serialize_system_config(config.system)
+    packet_data += bytes([0, PACKET_TYPE_SYSTEM])
+    packet_data += serialize_system_config(config.system)
 
-    if config.manufacturer:
-        packet_data += bytes([0, PACKET_TYPE_MANUFACTURER])
-        packet_data += serialize_manufacturer_data(config.manufacturer)
+    packet_data += bytes([0, PACKET_TYPE_MANUFACTURER])
+    packet_data += serialize_manufacturer_data(config.manufacturer)
 
-    if config.power:
-        packet_data += bytes([0, PACKET_TYPE_POWER])
-        packet_data += serialize_power_option(config.power)
+    packet_data += bytes([0, PACKET_TYPE_POWER])
+    packet_data += serialize_power_option(config.power)
 
     # Serialize repeatable packets
     for i, display in enumerate(config.displays):

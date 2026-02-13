@@ -54,64 +54,61 @@ def config_to_json(config: GlobalConfig) -> dict:
     packets = []
 
     # System config (packet type 0x01 = 1)
-    if config.system:
-        sys = config.system
-        packets.append({
-            "id": "1",  # Decimal string
-            "name": "system_config",
-            "fields": {
-                "ic_type": str(sys.ic_type),
-                "communication_modes": f"0x{sys.communication_modes:x}",
-                "device_flags": f"0x{sys.device_flags:x}",
-                "pwr_pin": f"0x{sys.pwr_pin:02x}",
-                "reserved": "0x0"
-            }
-        })
+    sys = config.system
+    packets.append({
+        "id": "1",  # Decimal string
+        "name": "system_config",
+        "fields": {
+            "ic_type": str(sys.ic_type),
+            "communication_modes": f"0x{sys.communication_modes:x}",
+            "device_flags": f"0x{sys.device_flags:x}",
+            "pwr_pin": f"0x{sys.pwr_pin:02x}",
+            "reserved": "0x0"
+        }
+    })
 
     # Manufacturer data (packet type 0x02 = 2)
-    if config.manufacturer:
-        mfr = config.manufacturer
-        packets.append({
-            "id": "2",  # Decimal string
-            "name": "manufacturer_data",
-            "fields": {
-                "manufacturer_id": str(mfr.manufacturer_id),
-                "board_type": str(mfr.board_type),
-                "board_revision": f"0x{mfr.board_revision:x}",
-                "reserved": "0x0"
-            }
-        })
+    mfr = config.manufacturer
+    packets.append({
+        "id": "2",  # Decimal string
+        "name": "manufacturer_data",
+        "fields": {
+            "manufacturer_id": str(mfr.manufacturer_id),
+            "board_type": str(mfr.board_type),
+            "board_revision": f"0x{mfr.board_revision:x}",
+            "reserved": "0x0"
+        }
+    })
 
     # Power option (packet type 0x04 = 4)
-    if config.power:
-        pwr = config.power
+    pwr = config.power
 
-        # Handle battery_capacity_mah which can be int or bytes
-        if isinstance(pwr.battery_capacity_mah, bytes):
-            # Convert bytes to int (little-endian)
-            battery_capacity = int.from_bytes(pwr.battery_capacity_mah[:3], 'little')
-        else:
-            battery_capacity = pwr.battery_capacity_mah
+    # Handle battery_capacity_mah which can be int or bytes
+    if isinstance(pwr.battery_capacity_mah, bytes):
+        # Convert bytes to int (little-endian)
+        battery_capacity = int.from_bytes(pwr.battery_capacity_mah[:3], 'little')
+    else:
+        battery_capacity = pwr.battery_capacity_mah
 
-        packets.append({
-            "id": "4",  # Decimal string
-            "name": "power_option",
-            "fields": {
-                "power_mode": str(pwr.power_mode),
-                "battery_capacity_mah": f"0x{battery_capacity:x}",
-                "sleep_timeout_ms": f"0x{pwr.sleep_timeout_ms:x}",
-                "tx_power": f"0x{pwr.tx_power:x}",
-                "sleep_flags": f"0x{pwr.sleep_flags:x}",
-                "battery_sense_pin": f"0x{pwr.battery_sense_pin:x}",
-                "battery_sense_enable_pin": f"0x{pwr.battery_sense_enable_pin:x}",
-                "battery_sense_flags": f"0x{pwr.battery_sense_flags:x}",
-                "capacity_estimator": str(pwr.capacity_estimator),
-                "voltage_scaling_factor": f"0x{pwr.voltage_scaling_factor:x}",
-                "deep_sleep_current_ua": f"0x{pwr.deep_sleep_current_ua:x}",
-                "deep_sleep_time_seconds": f"0x{pwr.deep_sleep_time_seconds:x}",
-                "reserved": "0x0"
-            }
-        })
+    packets.append({
+        "id": "4",  # Decimal string
+        "name": "power_option",
+        "fields": {
+            "power_mode": str(pwr.power_mode),
+            "battery_capacity_mah": f"0x{battery_capacity:x}",
+            "sleep_timeout_ms": f"0x{pwr.sleep_timeout_ms:x}",
+            "tx_power": f"0x{pwr.tx_power:x}",
+            "sleep_flags": f"0x{pwr.sleep_flags:x}",
+            "battery_sense_pin": f"0x{pwr.battery_sense_pin:x}",
+            "battery_sense_enable_pin": f"0x{pwr.battery_sense_enable_pin:x}",
+            "battery_sense_flags": f"0x{pwr.battery_sense_flags:x}",
+            "capacity_estimator": str(pwr.capacity_estimator),
+            "voltage_scaling_factor": f"0x{pwr.voltage_scaling_factor:x}",
+            "deep_sleep_current_ua": f"0x{pwr.deep_sleep_current_ua:x}",
+            "deep_sleep_time_seconds": f"0x{pwr.deep_sleep_time_seconds:x}",
+            "reserved": "0x0"
+        }
+    })
 
     # Display configs (packet type 0x20 = 32)
     for display in config.displays:
@@ -240,20 +237,26 @@ def config_from_json(data: dict) -> GlobalConfig:
         GlobalConfig instance
 
     Raises:
-        KeyError: If required fields missing
-        ValueError: If invalid packet structure
+        ValueError: If required packets are missing or packet structure is invalid
     """
-    config = GlobalConfig(
-        version=data.get("version", 1),
-        minor_version=data.get("minor_version", 0)
-    )
+    system: SystemConfig | None = None
+    manufacturer: ManufacturerData | None = None
+    power: PowerOption | None = None
+    displays: list[DisplayConfig] = []
+    leds: list[LedConfig] = []
+    sensors: list[SensorData] = []
+    data_buses: list[DataBus] = []
+    binary_inputs: list[BinaryInputs] = []
+
+    version = data.get("version", 1)
+    minor_version = data.get("minor_version", 0)
 
     for packet in data.get("packets", []):
         packet_id = int(packet.get("id"))  # Parse decimal string ID
         fields = packet.get("fields", {})
 
         if packet_id == 1:  # 0x01 = system_config
-            config.system = SystemConfig(
+            system = SystemConfig(
                 ic_type=_parse_int(fields.get("ic_type", "0")),
                 communication_modes=_parse_int(fields.get("communication_modes", "0")),
                 device_flags=_parse_int(fields.get("device_flags", "0")),
@@ -262,7 +265,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             )
 
         elif packet_id == 2:  # 0x02 = manufacturer_data
-            config.manufacturer = ManufacturerData(
+            manufacturer = ManufacturerData(
                 manufacturer_id=_parse_int(fields.get("manufacturer_id", "0")),
                 board_type=_parse_int(fields.get("board_type", "0")),
                 board_revision=_parse_int(fields.get("board_revision", "0")),
@@ -270,7 +273,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             )
 
         elif packet_id == 4:  # 0x04 = power_option
-            config.power = PowerOption(
+            power = PowerOption(
                 power_mode=_parse_int(fields.get("power_mode", "0")),
                 battery_capacity_mah=_parse_int(fields.get("battery_capacity_mah", "0")),
                 sleep_timeout_ms=_parse_int(fields.get("sleep_timeout_ms", "0")),
@@ -287,7 +290,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             )
 
         elif packet_id == 32:  # 0x20 = display
-            config.displays.append(DisplayConfig(
+            displays.append(DisplayConfig(
                 instance_number=_parse_int(fields.get("instance_number", "0")),
                 display_technology=_parse_int(fields.get("display_technology", "0")),
                 panel_ic_type=_parse_int(fields.get("panel_ic_type", "0")),
@@ -311,7 +314,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             ))
 
         elif packet_id == 33:  # 0x21 = led
-            config.leds.append(LedConfig(
+            leds.append(LedConfig(
                 instance_number=_parse_int(fields.get("instance_number", "0")),
                 led_type=_parse_int(fields.get("led_type", "0")),
                 led_1_r=_parse_int(fields.get("led_1_r", "0")),
@@ -323,7 +326,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             ))
 
         elif packet_id == 35:  # 0x23 = sensor
-            config.sensors.append(SensorData(
+            sensors.append(SensorData(
                 instance_number=_parse_int(fields.get("instance_number", "0")),
                 sensor_type=_parse_int(fields.get("sensor_type", "0")),
                 bus_id=_parse_int(fields.get("bus_id", "0")),
@@ -331,7 +334,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             ))
 
         elif packet_id == 36:  # 0x24 = databus
-            config.data_buses.append(DataBus(
+            data_buses.append(DataBus(
                 instance_number=_parse_int(fields.get("instance_number", "0")),
                 bus_type=_parse_int(fields.get("bus_type", "0")),
                 pin_1=_parse_int(fields.get("pin_1", "0xff")),
@@ -349,7 +352,7 @@ def config_from_json(data: dict) -> GlobalConfig:
             ))
 
         elif packet_id == 37:  # 0x25 = binary_input
-            config.binary_inputs.append(BinaryInputs(
+            binary_inputs.append(BinaryInputs(
                 instance_number=_parse_int(fields.get("instance_number", "0")),
                 input_type=_parse_int(fields.get("input_type", "0")),
                 display_as=_parse_int(fields.get("display_as", "0")),
@@ -361,5 +364,28 @@ def config_from_json(data: dict) -> GlobalConfig:
                 reserved=bytes(15)  # Fixed size
             ))
 
-    config.loaded = True
-    return config
+    missing_required = []
+    if system is None:
+        missing_required.append("system")
+    if manufacturer is None:
+        missing_required.append("manufacturer")
+    if power is None:
+        missing_required.append("power")
+    if missing_required:
+        raise ValueError(
+            "Missing required packet(s): " + ", ".join(missing_required)
+        )
+
+    return GlobalConfig(
+        system=system,
+        manufacturer=manufacturer,
+        power=power,
+        displays=displays,
+        leds=leds,
+        sensors=sensors,
+        data_buses=data_buses,
+        binary_inputs=binary_inputs,
+        version=version,
+        minor_version=minor_version,
+        loaded=True,
+    )
