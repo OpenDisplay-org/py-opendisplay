@@ -30,6 +30,7 @@ from .models.config import (
     SystemConfig,
 )
 from .models.enums import (
+    BoardManufacturer,
     BusType,
     FitMode,
     ICType,
@@ -70,6 +71,7 @@ __all__ = [
     "ColorScheme",
     "DitherMode",
     "FitMode",
+    "BoardManufacturer",
     "RefreshMode",
     "ICType",
     "PowerMode",

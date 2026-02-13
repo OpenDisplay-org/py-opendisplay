@@ -15,6 +15,7 @@ from .config import (
 )
 from .config_json import config_from_json, config_to_json
 from .enums import (
+    BoardManufacturer,
     BusType,
     FitMode,
     ICType,
@@ -28,6 +29,7 @@ __all__ = [
     "AdvertisementData",
     "parse_advertisement",
     "BinaryInputs",
+    "BoardManufacturer",
     "BusType",
     "config_from_json",
     "config_to_json",

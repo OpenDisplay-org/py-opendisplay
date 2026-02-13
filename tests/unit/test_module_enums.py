@@ -2,6 +2,7 @@
 
 
 from opendisplay.models.enums import (
+    BoardManufacturer,
     BusType,
     ICType,
     PowerMode,
@@ -56,6 +57,22 @@ class TestPowerMode:
         assert PowerMode.BATTERY.name == "BATTERY"
         assert PowerMode.USB.name == "USB"
         assert PowerMode.SOLAR.name == "SOLAR"
+
+
+class TestBoardManufacturer:
+    """Test BoardManufacturer enum."""
+
+    def test_board_manufacturer_values(self):
+        """Test board manufacturer values from webconfig manufacturer_data enum."""
+        assert BoardManufacturer.DIY == 0
+        assert BoardManufacturer.SEEED == 1
+        assert BoardManufacturer.WAVESHARE == 2
+
+    def test_board_manufacturer_names(self):
+        """Test board manufacturer names."""
+        assert BoardManufacturer.DIY.name == "DIY"
+        assert BoardManufacturer.SEEED.name == "SEEED"
+        assert BoardManufacturer.WAVESHARE.name == "WAVESHARE"
 
 
 class TestBusType:

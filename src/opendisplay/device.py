@@ -18,7 +18,7 @@ from .encoding import (
 from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
-from .models.enums import FitMode, RefreshMode
+from .models.enums import BoardManufacturer, FitMode, RefreshMode
 from .models.firmware import FirmwareVersion
 from .protocol import (
     CHUNK_SIZE,
@@ -206,6 +206,16 @@ class OpenDisplayDevice:
             )
         return self._capabilities
 
+    def _ensure_manufacturer_data(self) -> BoardManufacturer | int:
+        """Ensure manufacturer data is available and return board manufacturer."""
+        if not self._config:
+            raise RuntimeError(
+                "Device config unknown - interrogate first or provide config"
+            )
+        if not self._config.manufacturer:
+            raise RuntimeError("Device config missing manufacturer data")
+        return self._config.manufacturer.manufacturer_id_enum
+
     @property
     def config(self) -> GlobalConfig | None:
         """Get full device configuration (if interrogated)."""
@@ -235,6 +245,20 @@ class OpenDisplayDevice:
     def rotation(self) -> int:
         """Get display rotation in degrees."""
         return self._ensure_capabilities().rotation
+
+    def get_board_manufacturer(self) -> BoardManufacturer | int:
+        """Get board manufacturer from config.
+
+        Requires config to be available via interrogation or constructor.
+
+        Returns:
+            Known values as BoardManufacturer enum.
+            Unknown future values as raw int.
+
+        Raises:
+            RuntimeError: If config or manufacturer packet is missing.
+        """
+        return self._ensure_manufacturer_data()
 
     async def interrogate(self) -> GlobalConfig:
         """Read device configuration from device.

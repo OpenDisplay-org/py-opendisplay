@@ -281,7 +281,16 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 Access detailed device configuration:
 
 ```python
+from opendisplay import BoardManufacturer
+
 async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Board manufacturer (requires config from interrogation or config=...)
+    manufacturer = device.get_board_manufacturer()
+    if isinstance(manufacturer, BoardManufacturer):
+        print(f"Manufacturer: {manufacturer.name}")
+    else:
+        print(f"Manufacturer ID (unknown): {manufacturer}")
+
     # Display configuration
     display = device.config.displays[0]
     print(f"Panel IC: {display.panel_ic_type}")

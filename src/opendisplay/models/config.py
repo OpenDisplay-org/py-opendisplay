@@ -10,7 +10,7 @@ from typing import ClassVar, Optional
 
 from epaper_dithering import ColorScheme
 
-from .enums import BusType, ICType, PowerMode, Rotation
+from .enums import BoardManufacturer, BusType, ICType, PowerMode, Rotation
 
 
 @dataclass
@@ -70,6 +70,14 @@ class ManufacturerData:
     board_type: int  # uint8
     board_revision: int  # uint8
     reserved: bytes  # 18 bytes
+
+    @property
+    def manufacturer_id_enum(self) -> BoardManufacturer | int:
+        """Get manufacturer ID as enum, or raw int if unknown."""
+        try:
+            return BoardManufacturer(self.manufacturer_id)
+        except ValueError:
+            return self.manufacturer_id
 
     SIZE: ClassVar[int] = 22
 

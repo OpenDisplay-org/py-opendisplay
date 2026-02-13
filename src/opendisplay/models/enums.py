@@ -20,6 +20,13 @@ class ICType(IntEnum):
     ESP32_C6 = 4
 
 
+class BoardManufacturer(IntEnum):
+    """Board manufacturer identifiers."""
+    DIY = 0
+    SEEED = 1
+    WAVESHARE = 2
+
+
 class PowerMode(IntEnum):
     """Power source types."""
     BATTERY = 1
