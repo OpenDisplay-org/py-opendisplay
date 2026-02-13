@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.0.0...v4.1.0) (2026-02-13)
+
+
+### Features
+
+* require at least one display in config parse and JSON import ([758d7a6](https://github.com/OpenDisplay-org/py-opendisplay/commit/758d7a6caa5d18043a65aa9480b622a775e7a3b0))
+
+
+### Bug Fixes
+
+* resolve display color scheme enum using from_value ([a2931db](https://github.com/OpenDisplay-org/py-opendisplay/commit/a2931db06f69e85528ca1ec40db3823d86d6779f))
+
 ## [4.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.2.0...v4.0.0) (2026-02-13)
 
 
