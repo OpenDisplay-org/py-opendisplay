@@ -32,11 +32,16 @@ from .models.config import (
 from .models.enums import (
     BoardManufacturer,
     BusType,
+    DIYBoardType,
     FitMode,
     ICType,
     PowerMode,
     RefreshMode,
     Rotation,
+    SeeedBoardType,
+    WaveshareBoardType,
+    get_board_type_name,
+    get_manufacturer_name,
 )
 from .protocol import MANUFACTURER_ID, SERVICE_UUID
 
@@ -72,11 +77,16 @@ __all__ = [
     "DitherMode",
     "FitMode",
     "BoardManufacturer",
+    "DIYBoardType",
     "RefreshMode",
     "ICType",
     "PowerMode",
     "BusType",
     "Rotation",
+    "SeeedBoardType",
+    "WaveshareBoardType",
+    "get_board_type_name",
+    "get_manufacturer_name",
     # Utilities
     "parse_advertisement",
     # Constants

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum
+from typing import Final
 
 
 class RefreshMode(IntEnum):
@@ -25,6 +26,82 @@ class BoardManufacturer(IntEnum):
     DIY = 0
     SEEED = 1
     WAVESHARE = 2
+
+
+class DIYBoardType(IntEnum):
+    """DIY board types."""
+    CUSTOM = 0
+
+
+class SeeedBoardType(IntEnum):
+    """Seeed board types."""
+    EE04 = 0
+    EN04 = 1
+    ESP32_S3 = 2
+    ESP32_C6 = 3
+    ESP32_C3 = 4
+    NRF52840 = 5
+    EE05 = 6
+    EN05 = 7
+
+
+class WaveshareBoardType(IntEnum):
+    """Waveshare board types."""
+    ESP32_S3_PHOTOPAINTER = 0
+
+
+MANUFACTURER_NAMES: Final[dict[BoardManufacturer, str]] = {
+    BoardManufacturer.DIY: "DIY",
+    BoardManufacturer.SEEED: "Seeed Studio",
+    BoardManufacturer.WAVESHARE: "Waveshare",
+}
+
+_BOARD_TYPE_NAMES_DIY: Final[dict[DIYBoardType, str]] = {
+    DIYBoardType.CUSTOM: "Custom",
+}
+
+_BOARD_TYPE_NAMES_SEEED: Final[dict[SeeedBoardType, str]] = {
+    SeeedBoardType.EE04: "EE04",
+    SeeedBoardType.EN04: "EN04",
+    SeeedBoardType.ESP32_S3: "ESP32_S3",
+    SeeedBoardType.ESP32_C6: "ESP32_C6",
+    SeeedBoardType.ESP32_C3: "ESP32_C3",
+    SeeedBoardType.NRF52840: "NRF52840",
+    SeeedBoardType.EE05: "EE05",
+    SeeedBoardType.EN05: "EN05",
+}
+
+_BOARD_TYPE_NAMES_WAVESHARE: Final[dict[WaveshareBoardType, str]] = {
+    WaveshareBoardType.ESP32_S3_PHOTOPAINTER: "PhotoPainter",
+}
+
+
+def get_manufacturer_name(manufacturer_id: BoardManufacturer | int) -> str | None:
+    """Get canonical manufacturer name, if known."""
+    try:
+        return MANUFACTURER_NAMES[BoardManufacturer(manufacturer_id)]
+    except (ValueError, KeyError):
+        return None
+
+
+def get_board_type_name(manufacturer_id: BoardManufacturer | int, board_type: int) -> str | None:
+    """Get human-readable board type name for a manufacturer, if known."""
+    try:
+        manufacturer = BoardManufacturer(manufacturer_id)
+    except ValueError:
+        return None
+
+    try:
+        if manufacturer == BoardManufacturer.DIY:
+            return _BOARD_TYPE_NAMES_DIY[DIYBoardType(board_type)]
+        if manufacturer == BoardManufacturer.SEEED:
+            return _BOARD_TYPE_NAMES_SEEED[SeeedBoardType(board_type)]
+        if manufacturer == BoardManufacturer.WAVESHARE:
+            return _BOARD_TYPE_NAMES_WAVESHARE[WaveshareBoardType(board_type)]
+    except (ValueError, KeyError):
+        return None
+
+    return None
 
 
 class PowerMode(IntEnum):

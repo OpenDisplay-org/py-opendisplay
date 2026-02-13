@@ -260,6 +260,38 @@ class OpenDisplayDevice:
         """
         return self._ensure_manufacturer_data()
 
+    def get_board_type(self) -> int:
+        """Get raw board type ID from config.
+
+        Requires config to be available via interrogation or constructor.
+
+        Raises:
+            RuntimeError: If config or manufacturer packet is missing.
+        """
+        if not self._config:
+            raise RuntimeError(
+                "Device config unknown - interrogate first or provide config"
+            )
+        if not self._config.manufacturer:
+            raise RuntimeError("Device config missing manufacturer data")
+        return self._config.manufacturer.board_type
+
+    def get_board_type_name(self) -> str | None:
+        """Get human-readable board type name from config, if known.
+
+        Requires config to be available via interrogation or constructor.
+
+        Raises:
+            RuntimeError: If config or manufacturer packet is missing.
+        """
+        if not self._config:
+            raise RuntimeError(
+                "Device config unknown - interrogate first or provide config"
+            )
+        if not self._config.manufacturer:
+            raise RuntimeError("Device config missing manufacturer data")
+        return self._config.manufacturer.board_type_name
+
     async def interrogate(self) -> GlobalConfig:
         """Read device configuration from device.
 

@@ -11,7 +11,18 @@ from typing import ClassVar, Optional
 
 from epaper_dithering import ColorScheme
 
-from .enums import BoardManufacturer, BusType, ICType, PowerMode, Rotation
+from .enums import (
+    BoardManufacturer,
+    BusType,
+    DIYBoardType,
+    ICType,
+    PowerMode,
+    Rotation,
+    SeeedBoardType,
+    WaveshareBoardType,
+    get_board_type_name,
+    get_manufacturer_name,
+)
 
 
 @dataclass
@@ -79,6 +90,35 @@ class ManufacturerData:
             return BoardManufacturer(self.manufacturer_id)
         except ValueError:
             return self.manufacturer_id
+
+    @property
+    def manufacturer_name(self) -> str | None:
+        """Get canonical manufacturer name, if known."""
+        return get_manufacturer_name(self.manufacturer_id)
+
+    @property
+    def board_type_enum(self) -> DIYBoardType | SeeedBoardType | WaveshareBoardType | int:
+        """Get board type as manufacturer-specific enum, or raw int if unknown."""
+        manufacturer = self.manufacturer_id_enum
+        if not isinstance(manufacturer, BoardManufacturer):
+            return self.board_type
+
+        try:
+            if manufacturer == BoardManufacturer.DIY:
+                return DIYBoardType(self.board_type)
+            if manufacturer == BoardManufacturer.SEEED:
+                return SeeedBoardType(self.board_type)
+            if manufacturer == BoardManufacturer.WAVESHARE:
+                return WaveshareBoardType(self.board_type)
+        except ValueError:
+            return self.board_type
+
+        return self.board_type
+
+    @property
+    def board_type_name(self) -> str | None:
+        """Get human-readable board type name for this manufacturer, if known."""
+        return get_board_type_name(self.manufacturer_id, self.board_type)
 
     SIZE: ClassVar[int] = 22
 

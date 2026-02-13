@@ -44,3 +44,24 @@ class TestBoardManufacturerAccess:
 
         with pytest.raises(RuntimeError, match="missing manufacturer data"):
             device.get_board_manufacturer()
+
+    def test_get_board_type_returns_raw_id(self):
+        config = GlobalConfig(manufacturer=_manufacturer_packet(1))
+        config.manufacturer.board_type = 6
+        device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", config=config)
+
+        assert device.get_board_type() == 6
+
+    def test_get_board_type_name_returns_known_name(self):
+        config = GlobalConfig(manufacturer=_manufacturer_packet(1))
+        config.manufacturer.board_type = 1
+        device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", config=config)
+
+        assert device.get_board_type_name() == "EN04"
+
+    def test_get_board_type_name_returns_none_for_unknown(self):
+        config = GlobalConfig(manufacturer=_manufacturer_packet(1))
+        config.manufacturer.board_type = 99
+        device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF", config=config)
+
+        assert device.get_board_type_name() is None

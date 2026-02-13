@@ -290,6 +290,11 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
         print(f"Manufacturer: {manufacturer.name}")
     else:
         print(f"Manufacturer ID (unknown): {manufacturer}")
+    if device.config.manufacturer:
+        mfg = device.config.manufacturer
+        print(f"Manufacturer slug: {mfg.manufacturer_name or f'unknown({mfg.manufacturer_id})'}")
+        print(f"Board model: {mfg.board_type_name or f'unknown({mfg.board_type})'}")
+        print(f"Board revision: {mfg.board_revision}")
 
     # Display configuration
     display = device.config.displays[0]

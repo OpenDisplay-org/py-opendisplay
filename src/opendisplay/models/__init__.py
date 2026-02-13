@@ -17,11 +17,16 @@ from .config_json import config_from_json, config_to_json
 from .enums import (
     BoardManufacturer,
     BusType,
+    DIYBoardType,
     FitMode,
     ICType,
     PowerMode,
     RefreshMode,
     Rotation,
+    SeeedBoardType,
+    WaveshareBoardType,
+    get_board_type_name,
+    get_manufacturer_name,
 )
 from .firmware import FirmwareVersion
 
@@ -31,6 +36,7 @@ __all__ = [
     "BinaryInputs",
     "BoardManufacturer",
     "BusType",
+    "DIYBoardType",
     "config_from_json",
     "config_to_json",
     "DataBus",
@@ -46,6 +52,10 @@ __all__ = [
     "PowerOption",
     "RefreshMode",
     "Rotation",
+    "SeeedBoardType",
     "SensorData",
     "SystemConfig",
+    "WaveshareBoardType",
+    "get_board_type_name",
+    "get_manufacturer_name",
 ]

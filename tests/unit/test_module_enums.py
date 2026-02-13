@@ -4,10 +4,15 @@
 from opendisplay.models.enums import (
     BoardManufacturer,
     BusType,
+    DIYBoardType,
     ICType,
     PowerMode,
     RefreshMode,
     Rotation,
+    SeeedBoardType,
+    WaveshareBoardType,
+    get_board_type_name,
+    get_manufacturer_name,
 )
 
 
@@ -73,6 +78,36 @@ class TestBoardManufacturer:
         assert BoardManufacturer.DIY.name == "DIY"
         assert BoardManufacturer.SEEED.name == "SEEED"
         assert BoardManufacturer.WAVESHARE.name == "WAVESHARE"
+
+
+class TestBoardTypeEnums:
+    """Test manufacturer-specific board type enums."""
+
+    def test_diy_board_type_values(self):
+        """Test DIY board type values."""
+        assert DIYBoardType.CUSTOM == 0
+
+    def test_seeed_board_type_values(self):
+        """Test Seeed board type values."""
+        assert SeeedBoardType.EE04 == 0
+        assert SeeedBoardType.EN04 == 1
+        assert SeeedBoardType.EE05 == 6
+        assert SeeedBoardType.EN05 == 7
+
+    def test_waveshare_board_type_values(self):
+        """Test Waveshare board type values."""
+        assert WaveshareBoardType.ESP32_S3_PHOTOPAINTER == 0
+
+    def test_board_type_name_helpers(self):
+        """Test board type and manufacturer name helpers."""
+        assert get_manufacturer_name(BoardManufacturer.DIY) == "DIY"
+        assert get_manufacturer_name(99) is None
+
+        assert get_board_type_name(BoardManufacturer.DIY, 0) == "Custom"
+        assert get_board_type_name(BoardManufacturer.SEEED, 1) == "EN04"
+        assert get_board_type_name(BoardManufacturer.WAVESHARE, 0) == "PhotoPainter"
+        assert get_board_type_name(BoardManufacturer.SEEED, 99) is None
+        assert get_board_type_name(99, 0) is None
 
 
 class TestBusType:
