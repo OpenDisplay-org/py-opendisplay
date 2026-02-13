@@ -295,6 +295,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     display = device.config.displays[0]
     print(f"Panel IC: {display.panel_ic_type}")
     print(f"Rotation: {display.rotation}°")
+    print(f"Diagonal: {display.screen_diagonal_inches:.1f}\"" if display.screen_diagonal_inches is not None else "Diagonal: unknown")
     print(f"Supports ZIP: {display.supports_zip}")
     print(f"Supports Direct Write: {display.supports_direct_write}")
 

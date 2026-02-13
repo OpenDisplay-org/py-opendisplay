@@ -5,6 +5,7 @@
   """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import ClassVar, Optional
 
@@ -211,6 +212,14 @@ class DisplayConfig:
     def clear_on_boot(self) -> bool:
         """Check if display should clear screen at bootup (TRANSMISSION_MODE_CLEAR_ON_BOOT)."""
         return bool(self.transmission_modes & 0x80)
+
+    @property
+    def screen_diagonal_inches(self) -> float | None:
+        """Get physical screen diagonal in inches if dimensions are known."""
+        if self.active_width_mm <= 0 or self.active_height_mm <= 0:
+            return None
+        diagonal_mm = math.hypot(self.active_width_mm, self.active_height_mm)
+        return diagonal_mm / 25.4
 
     @property
     def color_scheme_enum(self) -> ColorScheme | int:
