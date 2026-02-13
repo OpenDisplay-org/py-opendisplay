@@ -160,6 +160,18 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
         elif packet_type == PACKET_TYPE_BINARY_INPUT:
             binary_inputs.append(_parse_binary_inputs(data))
 
+    missing_required = []
+    if system is None:
+        missing_required.append("system")
+    if manufacturer is None:
+        missing_required.append("manufacturer")
+    if power is None:
+        missing_required.append("power")
+    if missing_required:
+        raise ConfigParseError(
+            "Missing required packet(s): " + ", ".join(missing_required)
+        )
+
     return GlobalConfig(
         system=system,
         manufacturer=manufacturer,

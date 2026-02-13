@@ -433,25 +433,22 @@ class OpenDisplayDevice:
         """
         _LOGGER.debug("Writing config to device %s", self.mac_address)
 
-        # Validate critical packets are present
-        if not config.system:
-            _LOGGER.warning("Config missing system packet - device may not boot correctly")
-        if not config.displays:
-            raise ValueError("Config must have at least one display")
-
-        # Warn about optional but important packets
+        # Validate required packets
         missing_packets = []
+        if not config.system:
+            missing_packets.append("system")
         if not config.manufacturer:
             missing_packets.append("manufacturer")
         if not config.power:
             missing_packets.append("power")
 
         if missing_packets:
-            _LOGGER.warning(
-                "Config missing optional packets: %s. "
-                "Device may lose these settings.",
-                ", ".join(missing_packets)
+            raise ValueError(
+                f"Config missing required packets: {', '.join(missing_packets)}"
             )
+
+        if not config.displays:
+            raise ValueError("Config must have at least one display")
 
         # Serialize config to binary
         config_data = serialize_config(config)
