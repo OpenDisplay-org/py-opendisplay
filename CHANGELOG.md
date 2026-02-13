@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.2.0...v4.0.0) (2026-02-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* make core config packets non-optional across models and serialization
+
+### Features
+
+* add typed board type mappings and lookup helpers ([2731ee1](https://github.com/OpenDisplay-org/py-opendisplay/commit/2731ee1bf3371af70329f0decef8407f41f11c4c))
+* enforce required config packets for parse and write ([6f2d59d](https://github.com/OpenDisplay-org/py-opendisplay/commit/6f2d59d740cc14510e7109b84aa5621920b605b6))
+* make core config packets non-optional across models and serialization ([3749da6](https://github.com/OpenDisplay-org/py-opendisplay/commit/3749da6baf94d1be2d41328d4226522a14f7d6ac))
+
 ## [3.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.1.0...v3.2.0) (2026-02-13)
 
 
