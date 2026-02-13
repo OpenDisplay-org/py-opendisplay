@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v3.0.0...v3.1.0) (2026-02-13)
+
+
+### Features
+
+* add typed board manufacturer API and docs ([a79eb8d](https://github.com/OpenDisplay-org/py-opendisplay/commit/a79eb8d9d1c9c2ed440a77930115d6c7b90f84f8))
+
 ## [3.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v2.5.1...v3.0.0) (2026-02-11)
 
 
