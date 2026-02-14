@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import struct
+import time
 from dataclasses import dataclass, field
 
 
@@ -48,6 +49,169 @@ class AdvertisementData:
     connection_requested: bool | None = None
     dynamic_data: bytes = field(default_factory=bytes)
     raw_data: bytes = field(default_factory=bytes)
+
+    def button_event(self, byte_index: int) -> ButtonEventData | None:
+        """Decode one dynamic return byte as button data (v1 only).
+
+        Args:
+            byte_index: Index in dynamic return block (0-10)
+
+        Returns:
+            Parsed button data, or None if this is not a v1 advertisement.
+
+        Raises:
+            IndexError: If byte_index is outside 0-10
+        """
+        if self.format_version != "v1":
+            return None
+        if byte_index < 0 or byte_index >= len(self.dynamic_data):
+            raise IndexError(f"button byte index out of range: {byte_index}")
+        return decode_button_event(self.dynamic_data[byte_index], byte_index)
+
+    def is_pressed(self, byte_index: int) -> bool | None:
+        """Return pressed state for one dynamic byte (v1 only)."""
+        event = self.button_event(byte_index)
+        if event is None:
+            return None
+        return event.pressed
+
+    @property
+    def button_events(self) -> list[ButtonEventData]:
+        """Decode all dynamic return bytes as button event data (v1 only)."""
+        if self.format_version != "v1":
+            return []
+        return [decode_button_event(raw, i) for i, raw in enumerate(self.dynamic_data)]
+
+
+@dataclass(frozen=True)
+class ButtonEventData:
+    """Decoded button data stored in one v1 dynamic byte."""
+
+    byte_index: int
+    raw: int
+    button_id: int
+    press_count: int
+    pressed: bool
+
+
+@dataclass(frozen=True)
+class ButtonChangeEvent:
+    """State transition emitted by AdvertisementTracker."""
+
+    address: str
+    byte_index: int
+    event_type: str
+    button_id: int
+    pressed: bool
+    press_count: int
+    previous_press_count: int
+    raw: int
+    previous_raw: int
+    timestamp: float
+
+
+def decode_button_event(raw: int, byte_index: int) -> ButtonEventData:
+    """Decode one dynamic return byte into button fields."""
+    return ButtonEventData(
+        byte_index=byte_index,
+        raw=raw,
+        button_id=raw & 0x07,
+        press_count=(raw >> 3) & 0x0F,
+        pressed=bool((raw >> 7) & 0x01),
+    )
+
+
+class AdvertisementTracker:
+    """Track per-device v1 advertisements and emit button transitions.
+
+    This is best-effort only: BLE advertisements can be dropped.
+    """
+
+    def __init__(self) -> None:
+        self._last_by_address: dict[str, list[ButtonEventData]] = {}
+
+    def reset(self, address: str | None = None) -> None:
+        """Reset tracker state for one device or all devices."""
+        if address is None:
+            self._last_by_address.clear()
+        else:
+            self._last_by_address.pop(address, None)
+
+    def update(
+        self,
+        address: str,
+        advertisement: AdvertisementData,
+        timestamp: float | None = None,
+    ) -> list[ButtonChangeEvent]:
+        """Process one advertisement and return detected transitions."""
+        if advertisement.format_version != "v1":
+            self._last_by_address.pop(address, None)
+            return []
+
+        current = advertisement.button_events
+        previous = self._last_by_address.get(address)
+        self._last_by_address[address] = current
+
+        if previous is None or len(previous) != len(current):
+            return []
+
+        now = timestamp if timestamp is not None else time.time()
+        events: list[ButtonChangeEvent] = []
+
+        for prev, curr in zip(previous, current, strict=False):
+            if prev.raw == curr.raw:
+                continue
+
+            if prev.button_id != curr.button_id:
+                events.append(
+                    ButtonChangeEvent(
+                        address=address,
+                        byte_index=curr.byte_index,
+                        event_type="button_slot_changed",
+                        button_id=curr.button_id,
+                        pressed=curr.pressed,
+                        press_count=curr.press_count,
+                        previous_press_count=prev.press_count,
+                        raw=curr.raw,
+                        previous_raw=prev.raw,
+                        timestamp=now,
+                    )
+                )
+                continue
+
+            if prev.pressed != curr.pressed:
+                events.append(
+                    ButtonChangeEvent(
+                        address=address,
+                        byte_index=curr.byte_index,
+                        event_type="button_down" if curr.pressed else "button_up",
+                        button_id=curr.button_id,
+                        pressed=curr.pressed,
+                        press_count=curr.press_count,
+                        previous_press_count=prev.press_count,
+                        raw=curr.raw,
+                        previous_raw=prev.raw,
+                        timestamp=now,
+                    )
+                )
+
+            if prev.press_count != curr.press_count:
+                events.append(
+                    ButtonChangeEvent(
+                        address=address,
+                        byte_index=curr.byte_index,
+                        event_type="press_count_changed",
+                        button_id=curr.button_id,
+                        pressed=curr.pressed,
+                        press_count=curr.press_count,
+                        previous_press_count=prev.press_count,
+                        raw=curr.raw,
+                        previous_raw=prev.raw,
+                        timestamp=now,
+                    )
+                )
+
+        return events
 
 
 LEGACY_LENGTH = 11

@@ -16,7 +16,14 @@ from .exceptions import (
     OpenDisplayError,
     ProtocolError,
 )
-from .models.advertisement import AdvertisementData, parse_advertisement
+from .models.advertisement import (
+    AdvertisementData,
+    AdvertisementTracker,
+    ButtonChangeEvent,
+    ButtonEventData,
+    decode_button_event,
+    parse_advertisement,
+)
 from .models.capabilities import DeviceCapabilities
 from .models.config import (
     BinaryInputs,
@@ -74,6 +81,9 @@ __all__ = [
     # Models - Other
     "DeviceCapabilities",
     "AdvertisementData",
+    "AdvertisementTracker",
+    "ButtonEventData",
+    "ButtonChangeEvent",
     # Enums
     "ColorScheme",
     "DitherMode",
@@ -91,6 +101,7 @@ __all__ = [
     "get_manufacturer_name",
     # Utilities
     "parse_advertisement",
+    "decode_button_event",
     # Constants
     "SERVICE_UUID",
     "MANUFACTURER_ID",

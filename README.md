@@ -344,6 +344,7 @@ if adv_data.format_version == "v1":
     print(f"Reboot flag: {adv_data.reboot_flag}")
     print(f"Connection requested: {adv_data.connection_requested}")
     print(f"Dynamic bytes: {adv_data.dynamic_data.hex()}")
+    print(f"Button byte 0 pressed: {adv_data.is_pressed(0)}")
 ```
 
 `parse_advertisement()` auto-detects both firmware formats without connecting:
@@ -352,9 +353,22 @@ if adv_data.format_version == "v1":
 
 It also accepts payloads where the manufacturer ID (`0x2446`) is still prefixed.
 
+Track button up/down transitions across packets with `AdvertisementTracker`:
+
+```python
+from opendisplay import AdvertisementTracker, parse_advertisement
+
+tracker = AdvertisementTracker()
+
+adv = parse_advertisement(manufacturer_data)
+for event in tracker.update(address, adv):
+    print(event.event_type, event.button_id, event.pressed, event.press_count)
+```
+
 #### Live Listener Script
 
-Use the included script to scan and print parsed advertisement data live:
+Use the included script to scan and print parsed advertisement data live,
+including v1 button transition events (`button_down`, `button_up`, `press_count_changed`):
 
 ```bash
 uv run python examples/listen_advertisements.py --duration 60 --all

@@ -2,7 +2,42 @@
 
 import pytest
 
-from opendisplay.models.advertisement import AdvertisementData, parse_advertisement
+from opendisplay.models.advertisement import (
+    AdvertisementData,
+    AdvertisementTracker,
+    decode_button_event,
+    parse_advertisement,
+)
+
+
+def _v1_payload(
+    dynamic_data: bytes,
+    *,
+    temperature_c: float = 22.0,
+    battery_mv: int = 3950,
+    reboot_flag: bool = False,
+    connection_requested: bool = False,
+    loop_counter: int = 0,
+) -> bytes:
+    """Build v1-format advertisement payload (without manufacturer ID)."""
+    if len(dynamic_data) != 11:
+        raise ValueError("dynamic_data must be exactly 11 bytes")
+
+    temp_encoded = int(round((temperature_c + 40.0) * 2.0))
+    temp_encoded = max(0, min(255, temp_encoded))
+
+    battery_10mv = max(0, min(511, battery_mv // 10))
+    battery_low = battery_10mv & 0xFF
+    battery_high = (battery_10mv >> 8) & 0x01
+
+    status = battery_high
+    if reboot_flag:
+        status |= 0x02
+    if connection_requested:
+        status |= 0x04
+    status |= (loop_counter & 0x0F) << 4
+
+    return dynamic_data + bytes([temp_encoded, battery_low, status])
 
 
 class TestParseAdvertisement:
@@ -127,3 +162,70 @@ class TestParseAdvertisement:
 
         with pytest.raises(ValueError, match="Unsupported legacy advertisement signature"):
             parse_advertisement(data)
+
+    def test_decode_button_event_helper(self):
+        """Decode packed button fields from one v1 dynamic byte."""
+        # button_id=3, press_count=5, pressed=1
+        decoded = decode_button_event(0xAB, byte_index=2)
+
+        assert decoded.byte_index == 2
+        assert decoded.raw == 0xAB
+        assert decoded.button_id == 3
+        assert decoded.press_count == 5
+        assert decoded.pressed is True
+
+    def test_advertisement_button_helpers_v1(self):
+        """v1 advertisements expose convenience helpers."""
+        payload = _v1_payload(
+            bytes([0xAB]) + bytes(10),
+            temperature_c=21.5,
+            battery_mv=3890,
+            loop_counter=7,
+        )
+        adv = parse_advertisement(payload)
+
+        event = adv.button_event(0)
+        assert event is not None
+        assert event.button_id == 3
+        assert event.press_count == 5
+        assert event.pressed is True
+        assert adv.is_pressed(0) is True
+        assert len(adv.button_events) == 11
+
+    def test_advertisement_button_helpers_legacy(self):
+        """Legacy advertisements return no button convenience data."""
+        data = bytes([0x02, 0x36, 0x00, 0x6C, 0x00, 0xC3, 0x01, 0x55, 0x0F, 0x16, 0x4D])
+        adv = parse_advertisement(data)
+
+        assert adv.button_event(0) is None
+        assert adv.is_pressed(0) is None
+        assert adv.button_events == []
+
+    def test_advertisement_tracker_emits_button_events(self):
+        """Tracker emits edge/count events on v1 payload transitions."""
+        tracker = AdvertisementTracker()
+        address = "AA:BB:CC:DD:EE:FF"
+
+        first = parse_advertisement(
+            _v1_payload(bytes([0x0A]) + bytes(10), loop_counter=1)
+        )  # id=2, count=1, up
+        second = parse_advertisement(
+            _v1_payload(bytes([0x92]) + bytes(10), loop_counter=2)
+        )  # id=2, count=2, down
+        third = parse_advertisement(
+            _v1_payload(bytes([0x12]) + bytes(10), loop_counter=3)
+        )  # id=2, count=2, up
+
+        assert tracker.update(address, first, timestamp=1.0) == []
+
+        second_events = tracker.update(address, second, timestamp=2.0)
+        assert [e.event_type for e in second_events] == ["button_down", "press_count_changed"]
+        assert second_events[0].button_id == 2
+        assert second_events[0].pressed is True
+        assert second_events[1].previous_press_count == 1
+        assert second_events[1].press_count == 2
+
+        third_events = tracker.update(address, third, timestamp=3.0)
+        assert [e.event_type for e in third_events] == ["button_up"]
+        assert third_events[0].button_id == 2
+        assert third_events[0].pressed is False
