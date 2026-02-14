@@ -338,6 +338,26 @@ adv_data = parse_advertisement(manufacturer_data)
 print(f"Battery: {adv_data.battery_mv}mV")
 print(f"Temperature: {adv_data.temperature_c}°C")
 print(f"Loop counter: {adv_data.loop_counter}")
+print(f"Format: {adv_data.format_version}")  # "legacy" or "v1"
+
+if adv_data.format_version == "v1":
+    print(f"Reboot flag: {adv_data.reboot_flag}")
+    print(f"Connection requested: {adv_data.connection_requested}")
+    print(f"Dynamic bytes: {adv_data.dynamic_data.hex()}")
+```
+
+`parse_advertisement()` auto-detects both firmware formats without connecting:
+- Legacy payload: 11 bytes (`battery_mv`, signed `temperature_c`, `loop_counter`)
+- v1 payload: 14 bytes (firmware 1.0+, encoded temperature/battery + status flags)
+
+It also accepts payloads where the manufacturer ID (`0x2446`) is still prefixed.
+
+#### Live Listener Script
+
+Use the included script to scan and print parsed advertisement data live:
+
+```bash
+uv run python examples/listen_advertisements.py --duration 60 --all
 ```
 
 ### Device Discovery

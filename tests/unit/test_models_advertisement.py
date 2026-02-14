@@ -21,6 +21,10 @@ class TestParseAdvertisement:
         assert result.battery_mv == 3925
         assert result.temperature_c == 22
         assert result.loop_counter == 77
+        assert result.format_version == "legacy"
+        assert result.reboot_flag is None
+        assert result.connection_requested is None
+        assert result.dynamic_data == b""
 
     def test_parse_advertisement_different_values(self):
         """Test parsing with different sensor values."""
@@ -75,3 +79,51 @@ class TestParseAdvertisement:
         result = parse_advertisement(data)
 
         assert result.loop_counter == 255
+
+    def test_parse_advertisement_v1_format(self):
+        """Test parsing v1 (firmware 1.0+) 14-byte advertisement data."""
+        # dynamic_data[0:11]
+        # temperature: 22.0C -> (22 + 40) * 2 = 124 (0x7c)
+        # battery: 3.95V -> 3950mV -> 395 x 10mV units -> low=0x8b, high bit=1
+        # status: bit0=batt_msb(1), bit1=reboot(1), bit2=conn_req(0), bits4-7=loop(5)
+        data = bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0x7C, 0x8B, 0x53])
+
+        result = parse_advertisement(data)
+
+        assert result.format_version == "v1"
+        assert result.temperature_c == 22.0
+        assert result.battery_mv == 3950
+        assert result.loop_counter == 5
+        assert result.reboot_flag is True
+        assert result.connection_requested is False
+        assert result.dynamic_data == bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+
+    def test_parse_advertisement_strips_manufacturer_id_for_legacy(self):
+        """Parser should accept payloads with manufacturer ID included."""
+        # Manufacturer ID 0x2446 (little-endian), followed by legacy 11-byte payload
+        payload = bytes([0x46, 0x24, 0x02, 0x36, 0x00, 0x6C, 0x00, 0xC3, 0x01, 0x55, 0x0F, 0x16, 0x4D])
+
+        result = parse_advertisement(payload)
+
+        assert result.format_version == "legacy"
+        assert result.battery_mv == 3925
+        assert result.temperature_c == 22
+        assert result.loop_counter == 77
+
+    def test_parse_advertisement_strips_manufacturer_id_for_v1(self):
+        """Parser should accept v1 payloads with manufacturer ID included."""
+        payload = bytes([0x46, 0x24, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0x7C, 0x8B, 0x53])
+
+        result = parse_advertisement(payload)
+
+        assert result.format_version == "v1"
+        assert result.battery_mv == 3950
+        assert result.temperature_c == 22.0
+        assert result.loop_counter == 5
+
+    def test_parse_advertisement_rejects_unknown_legacy_signature(self):
+        """11-byte payload with unknown signature should be rejected."""
+        data = bytes([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x55, 0x0F, 0x16, 0x4D])
+
+        with pytest.raises(ValueError, match="Unsupported legacy advertisement signature"):
+            parse_advertisement(data)
