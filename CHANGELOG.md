@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.1.0...v4.2.0) (2026-02-14)
+
+
+### Features
+
+* return processed preview image from upload_image ([54d6ddc](https://github.com/OpenDisplay-org/py-opendisplay/commit/54d6ddcf1736b6d151d70ce9103191d34715fad8))
+
 ## [4.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.0.0...v4.1.0) (2026-02-13)
 
 
