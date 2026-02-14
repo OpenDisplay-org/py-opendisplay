@@ -553,7 +553,7 @@ class OpenDisplayDevice:
         compress: bool,
         tone_compression: float | str = "auto",
         fit: FitMode = FitMode.STRETCH,
-    ) -> tuple[bytes, bytes | None]:
+    ) -> tuple[bytes, bytes | None, Image.Image]:
         """Prepare image for upload.
 
         Handles fitting, dithering, encoding, and optional compression.
@@ -566,7 +566,7 @@ class OpenDisplayDevice:
             fit: How to map the image to display dimensions
 
         Returns:
-            Tuple of (uncompressed_data, compressed_data or None)
+            Tuple of (uncompressed_data, compressed_data or None, processed_image)
         """
         target_size = (self.width, self.height)
 
@@ -609,7 +609,7 @@ class OpenDisplayDevice:
         if compress:
             compressed_data = compress_image_data(image_data, level=6)
 
-        return image_data, compressed_data
+        return image_data, compressed_data, dithered
 
     async def upload_image(
             self,
@@ -619,7 +619,7 @@ class OpenDisplayDevice:
             compress: bool = True,
             tone_compression: float | str = "auto",
             fit: FitMode = FitMode.CONTAIN,
-    ) -> None:
+    ) -> Image.Image:
         """Upload image to device display.
 
         Automatically handles:
@@ -647,6 +647,9 @@ class OpenDisplayDevice:
         Raises:
             RuntimeError: If device not interrogated/configured
             ProtocolError: If upload fails
+
+        Returns:
+            Processed image that matches what is sent to the display.
         """
         if not self._capabilities:
             raise RuntimeError(
@@ -662,7 +665,7 @@ class OpenDisplayDevice:
         )
 
         # Prepare image (fit, dither, encode, compress)
-        image_data, compressed_data = self._prepare_image(
+        image_data, compressed_data, processed_image = self._prepare_image(
             image, dither_mode, compress, tone_compression, fit
         )
 
@@ -684,6 +687,7 @@ class OpenDisplayDevice:
             await self._execute_upload(image_data, refresh_mode, use_compression=False)
 
         _LOGGER.info("Image upload complete")
+        return processed_image
 
     async def _execute_upload(
         self,
