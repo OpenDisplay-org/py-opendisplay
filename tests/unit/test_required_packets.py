@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import struct
 
 import pytest
@@ -68,6 +69,16 @@ def _required_tlv(
     return b"".join(parts)
 
 
+def _wifi_payload() -> bytes:
+    ssid = b"MyWifi".ljust(32, b"\x00")
+    password = b"secret123".ljust(32, b"\x00")
+    encryption_type = bytes([0x03])  # WPA2
+    server_url = b"opendisplay.local".ljust(64, b"\x00")
+    server_port = (2446).to_bytes(2, byteorder="big")
+    reserved = b"\x00" * 29
+    return ssid + password + encryption_type + server_url + server_port + reserved
+
+
 def test_parse_tlv_requires_system_manufacturer_power() -> None:
     """Parser should fail when required packets are missing."""
     data = _required_tlv(include_manufacturer=False)
@@ -92,6 +103,19 @@ def test_parse_tlv_requires_display() -> None:
 
     with pytest.raises(ConfigParseError, match="Missing required packet\\(s\\): display"):
         parse_tlv_config(data)
+
+
+def test_parse_tlv_supports_wifi_config_packet_without_unknown_warning(caplog: pytest.LogCaptureFixture) -> None:
+    """Parser should recognize packet 0x26 (wifi_config) and not warn as unknown."""
+    data = _required_tlv() + _packet(4, 0x26, _wifi_payload())
+
+    with caplog.at_level(logging.WARNING, logger="opendisplay.protocol.config_parser"):
+        cfg = parse_tlv_config(data)
+
+    assert cfg.wifi_config is not None
+    assert cfg.wifi_config.ssid_text == "MyWifi"
+    assert cfg.wifi_config.server_port == 2446
+    assert "Unknown packet type 0x26" not in caplog.text
 
 
 def _required_json(*, include_display: bool = True) -> dict:

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         PowerOption,
         SensorData,
         SystemConfig,
+        WifiConfig,
     )
 
 # Packet type IDs (same as config_parser.py)
@@ -27,6 +28,7 @@ PACKET_TYPE_LED = 0x21
 PACKET_TYPE_SENSOR = 0x23
 PACKET_TYPE_DATABUS = 0x24
 PACKET_TYPE_BINARY_INPUT = 0x25
+PACKET_TYPE_WIFI_CONFIG = 0x26
 
 
 def calculate_config_crc(data: bytes) -> int:
@@ -384,6 +386,11 @@ def serialize_binary_inputs(config: BinaryInputs) -> bytes:
     return data + reserved[:15]
 
 
+def serialize_wifi_config(config: WifiConfig) -> bytes:
+    """Serialize WifiConfig to 160 bytes."""
+    return config.to_bytes()
+
+
 def serialize_config(config: GlobalConfig) -> bytes:
     """Serialize complete GlobalConfig to TLV binary format.
 
@@ -395,7 +402,7 @@ def serialize_config(config: GlobalConfig) -> bytes:
 
     TLV Packet Format:
     [1 byte: packet_number]  # 0-3 for repeatable types
-    [1 byte: packet_type]    # 0x01, 0x02, 0x04, 0x20-0x25
+    [1 byte: packet_type]    # 0x01, 0x02, 0x04, 0x20-0x26
     [N bytes: fixed-size data]
 
     Args:
@@ -454,6 +461,10 @@ def serialize_config(config: GlobalConfig) -> bytes:
             break
         packet_data += bytes([i, PACKET_TYPE_BINARY_INPUT])
         packet_data += serialize_binary_inputs(binary_input)
+
+    if config.wifi_config is not None:
+        packet_data += bytes([0, PACKET_TYPE_WIFI_CONFIG])
+        packet_data += serialize_wifi_config(config.wifi_config)
 
     # Validate size (max 4096 bytes including wrapper and CRC)
     total_size = len(packet_data) + 2  # +2 for CRC

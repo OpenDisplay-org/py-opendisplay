@@ -196,6 +196,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     print(f"IC Type: {config.system.ic_type_enum.name}")
     print(f"Displays: {len(config.displays)}")
     print(f"Sensors: {len(config.sensors)}")
+    print(f"WiFi config present: {config.wifi_config is not None}")
 ```
 
 Skip interrogation if the device info is already cached:
@@ -245,6 +246,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 
 **Note:** Many configuration changes (rotation, pin assignments, IC type) require a device reboot to take effect.
 `write_config()` requires `system`, `manufacturer`, `power`, and at least one display.
+When present, optional `wifi_config` (packet `0x26`) is preserved on write.
 
 #### JSON Import/Export
 
@@ -265,6 +267,7 @@ async with OpenDisplayDevice(mac_address="BB:CC:DD:EE:FF:00") as device:
 ```
 
 `import_config_json()` raises `ValueError` if required packets (`system`, `manufacturer`, `power`) or all display packets are missing.
+JSON packet id `38` (`wifi_config` / TLV `0x26`) is supported for import/export.
 
 ### Rebooting the Device
 
@@ -315,6 +318,13 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
     power = device.config.power
     print(f"Battery: {power.battery_mah}mAh")
     print(f"Power mode: {power.power_mode_enum.name}")
+
+    # Optional WiFi configuration (firmware packet 0x26)
+    wifi = device.config.wifi_config
+    if wifi is not None:
+        print(f"WiFi SSID: {wifi.ssid_text}")
+        print(f"WiFi encryption: {wifi.encryption_type}")
+        print(f"WiFi server: {wifi.server_url_text}:{wifi.server_port}")
 ```
 ### Advertisement Parsing
 

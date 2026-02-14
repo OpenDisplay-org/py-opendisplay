@@ -17,6 +17,7 @@ from .config import (
     PowerOption,
     SensorData,
     SystemConfig,
+    WifiConfig,
 )
 
 
@@ -216,6 +217,22 @@ def config_to_json(config: GlobalConfig) -> dict:
             }
         })
 
+    # WiFi config (packet type 0x26 = 38)
+    if config.wifi_config is not None:
+        wifi = config.wifi_config
+        packets.append({
+            "id": "38",  # Decimal string
+            "name": "wifi_config",
+            "fields": {
+                "ssid": wifi.ssid_text,
+                "password": wifi.password_text,
+                "encryption_type": str(wifi.encryption_type),
+                "server_url": wifi.server_url_text,
+                "server_port": f"0x{wifi.server_port:x}",
+                "reserved": "0x0",
+            }
+        })
+
     return {
         "version": config.version,
         "minor_version": 1,  # JSON format version (not stored in device)
@@ -248,6 +265,7 @@ def config_from_json(data: dict) -> GlobalConfig:
     sensors: list[SensorData] = []
     data_buses: list[DataBus] = []
     binary_inputs: list[BinaryInputs] = []
+    wifi_config: WifiConfig | None = None
 
     version = data.get("version", 1)
     minor_version = data.get("minor_version", 0)
@@ -365,6 +383,15 @@ def config_from_json(data: dict) -> GlobalConfig:
                 reserved=bytes(15)  # Fixed size
             ))
 
+        elif packet_id == 38:  # 0x26 = wifi_config
+            wifi_config = WifiConfig.from_strings(
+                ssid=str(fields.get("ssid", "")),
+                password=str(fields.get("password", "")),
+                encryption_type=_parse_int(fields.get("encryption_type", "0")),
+                server_url=str(fields.get("server_url", "")),
+                server_port=_parse_int(fields.get("server_port", "2446")),
+            )
+
     missing_required = []
     if system is None:
         missing_required.append("system")
@@ -388,6 +415,7 @@ def config_from_json(data: dict) -> GlobalConfig:
         sensors=sensors,
         data_buses=data_buses,
         binary_inputs=binary_inputs,
+        wifi_config=wifi_config,
         version=version,
         minor_version=minor_version,
         loaded=True,

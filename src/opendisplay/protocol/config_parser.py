@@ -16,6 +16,7 @@ from ..models.config import (
     PowerOption,
     SensorData,
     SystemConfig,
+    WifiConfig,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ PACKET_TYPE_LED = 0x21
 PACKET_TYPE_SENSOR = 0x23
 PACKET_TYPE_DATABUS = 0x24
 PACKET_TYPE_BINARY_INPUT = 0x25
+PACKET_TYPE_WIFI_CONFIG = 0x26
 
 
 def parse_config_response(raw_data: bytes) -> GlobalConfig:
@@ -141,6 +143,7 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
     sensors = []
     data_buses = []
     binary_inputs = []
+    wifi_config = None
 
     for (packet_type, packet_number), data in packets.items():
         if packet_type == PACKET_TYPE_SYSTEM:
@@ -159,6 +162,8 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
             data_buses.append(_parse_data_bus(data))
         elif packet_type == PACKET_TYPE_BINARY_INPUT:
             binary_inputs.append(_parse_binary_inputs(data))
+        elif packet_type == PACKET_TYPE_WIFI_CONFIG:
+            wifi_config = _parse_wifi_config(data)
 
     missing_required = []
     if system is None:
@@ -183,6 +188,7 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
         sensors=sensors,
         data_buses=data_buses,
         binary_inputs=binary_inputs,
+        wifi_config=wifi_config,
         version=version,  # From firmware wrapper
         minor_version=1,  # Not stored in device (only single version byte exists)
         loaded=True,
@@ -207,6 +213,7 @@ def _get_packet_size(packet_type: int) -> int | None:
         PACKET_TYPE_SENSOR: 30,
         PACKET_TYPE_DATABUS: 30,  # Fixed: was 28
         PACKET_TYPE_BINARY_INPUT: 30,  # Fixed: was 29
+        PACKET_TYPE_WIFI_CONFIG: 160,
     }
     return sizes.get(packet_type)
 
@@ -439,3 +446,11 @@ def _parse_binary_inputs(data: bytes) -> BinaryInputs:
         pulldowns=pulldowns,
         reserved=reserved,
     )
+
+
+def _parse_wifi_config(data: bytes) -> WifiConfig:
+    """Parse WifiConfig packet (0x26, 160 bytes)."""
+    if len(data) < 160:
+        raise ConfigParseError(f"WifiConfig too short: {len(data)} bytes (need 160)")
+
+    return WifiConfig.from_bytes(data[:160])

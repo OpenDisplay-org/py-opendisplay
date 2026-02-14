@@ -28,6 +28,7 @@ from .models.config import (
     PowerOption,
     SensorData,
     SystemConfig,
+    WifiConfig,
 )
 from .models.enums import (
     BoardManufacturer,
@@ -69,6 +70,7 @@ __all__ = [
     "SensorData",
     "DataBus",
     "BinaryInputs",
+    "WifiConfig",
     # Models - Other
     "DeviceCapabilities",
     "AdvertisementData",

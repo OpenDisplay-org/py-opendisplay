@@ -12,6 +12,7 @@ from .config import (
     PowerOption,
     SensorData,
     SystemConfig,
+    WifiConfig,
 )
 from .config_json import config_from_json, config_to_json
 from .enums import (
@@ -55,6 +56,7 @@ __all__ = [
     "SeeedBoardType",
     "SensorData",
     "SystemConfig",
+    "WifiConfig",
     "WaveshareBoardType",
     "get_board_type_name",
     "get_manufacturer_name",

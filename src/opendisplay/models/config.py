@@ -464,6 +464,100 @@ class BinaryInputs:
 
 
 @dataclass
+class WifiConfig:
+    """WiFi configuration (TLV packet type 0x26).
+
+    Size: 160 bytes (firmware fixed layout, excluding packet CRC)
+    """
+
+    ssid: bytes  # 32-byte null-terminated string buffer
+    password: bytes  # 32-byte null-terminated string buffer
+    encryption_type: int  # uint8
+    server_url: bytes  # 64-byte null-terminated string buffer
+    server_port: int  # uint16 (big-endian / network byte order)
+    reserved: bytes  # 29 bytes
+
+    SIZE: ClassVar[int] = 160
+
+    @staticmethod
+    def encode_c_string(value: str, size: int) -> bytes:
+        """Encode string into fixed-size null-padded C string bytes."""
+        encoded = value.encode("utf-8")
+        return encoded[:size].ljust(size, b"\x00")
+
+    @staticmethod
+    def decode_c_string(value: bytes) -> str:
+        """Decode fixed-size C string bytes (truncate at first null byte)."""
+        return value.split(b"\x00", 1)[0].decode("utf-8", errors="replace")
+
+    @property
+    def ssid_text(self) -> str:
+        """Get SSID as decoded text."""
+        return self.decode_c_string(self.ssid)
+
+    @property
+    def password_text(self) -> str:
+        """Get password as decoded text."""
+        return self.decode_c_string(self.password)
+
+    @property
+    def server_url_text(self) -> str:
+        """Get server URL/hostname as decoded text."""
+        return self.decode_c_string(self.server_url)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> WifiConfig:
+        """Parse from TLV packet data."""
+        if len(data) < cls.SIZE:
+            raise ValueError(f"Invalid WifiConfig size: {len(data)} < {cls.SIZE}")
+
+        return cls(
+            ssid=data[0:32],
+            password=data[32:64],
+            encryption_type=data[64],
+            server_url=data[65:129],
+            server_port=int.from_bytes(data[129:131], "big"),
+            reserved=data[131:160],
+        )
+
+    @classmethod
+    def from_strings(
+        cls,
+        *,
+        ssid: str,
+        password: str,
+        encryption_type: int = 0,
+        server_url: str = "",
+        server_port: int = 2446,
+        reserved: bytes | None = None,
+    ) -> WifiConfig:
+        """Build a WiFi config from user-facing string fields."""
+        return cls(
+            ssid=cls.encode_c_string(ssid, 32),
+            password=cls.encode_c_string(password, 32),
+            encryption_type=encryption_type & 0xFF,
+            server_url=cls.encode_c_string(server_url, 64),
+            server_port=server_port & 0xFFFF,
+            reserved=(reserved or b"\x00" * 29)[:29],
+        )
+
+    def to_bytes(self) -> bytes:
+        """Serialize to firmware packet bytes."""
+        ssid = self.ssid[:32].ljust(32, b"\x00")
+        password = self.password[:32].ljust(32, b"\x00")
+        server_url = self.server_url[:64].ljust(64, b"\x00")
+        reserved = self.reserved[:29].ljust(29, b"\x00")
+        return (
+            ssid
+            + password
+            + bytes([self.encryption_type & 0xFF])
+            + server_url
+            + self.server_port.to_bytes(2, byteorder="big")
+            + reserved
+        )
+
+
+@dataclass
 class GlobalConfig:
     """Complete device configuration parsed from TLV data.
 
@@ -480,6 +574,7 @@ class GlobalConfig:
     sensors: list[SensorData] = field(default_factory=list)
     data_buses: list[DataBus] = field(default_factory=list)
     binary_inputs: list[BinaryInputs] = field(default_factory=list)
+    wifi_config: WifiConfig | None = None
 
     # Metadata
     version: int = 0
