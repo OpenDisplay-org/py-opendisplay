@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.2.0...v4.3.0) (2026-02-14)
+
+
+### Features
+
+* **advertisements:** add v1 button tracker ([386b67a](https://github.com/OpenDisplay-org/py-opendisplay/commit/386b67a003fe0ddd12f8fcc57bc5f5c04c047f2a))
+* **config:** expose binary input button_data_byte_index and align 0x25 layout ([5981cfd](https://github.com/OpenDisplay-org/py-opendisplay/commit/5981cfd8df4537ef0c236858a02b8cf05a6fa227))
+* **config:** support wifi_config packet (0x26) ([8de1e96](https://github.com/OpenDisplay-org/py-opendisplay/commit/8de1e96e2b3e3f584098764c31459c2eb16e08e6))
+* **protocol:** add typed LED activate API and handle legacy wifi config packet ([ed9676a](https://github.com/OpenDisplay-org/py-opendisplay/commit/ed9676aa2e172de6f10b1adcf352c183d0c51774))
+* **protocol:** support firmware v1 config/advertisement updates ([9e929ed](https://github.com/OpenDisplay-org/py-opendisplay/commit/9e929eddb3f193dd36bed731d092970a8402382d))
+
 ## [4.2.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.1.0...v4.2.0) (2026-02-14)
 
 
