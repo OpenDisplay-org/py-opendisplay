@@ -213,6 +213,7 @@ def config_to_json(config: GlobalConfig) -> dict:
                 "invert": f"0x{binary_input.invert:x}",
                 "pullups": f"0x{binary_input.pullups:x}",
                 "pulldowns": f"0x{binary_input.pulldowns:x}",
+                "button_data_byte_index": f"0x{binary_input.button_data_byte_index:x}",
                 "reserved": "0x0"
             }
         })
@@ -380,7 +381,8 @@ def config_from_json(data: dict) -> GlobalConfig:
                 invert=_parse_int(fields.get("invert", "0")),
                 pullups=_parse_int(fields.get("pullups", "0")),
                 pulldowns=_parse_int(fields.get("pulldowns", "0")),
-                reserved=bytes(15)  # Fixed size
+                button_data_byte_index=_parse_int(fields.get("button_data_byte_index", "0")),
+                reserved=bytes(14)  # Fixed size
             ))
 
         elif packet_id == 38:  # 0x26 = wifi_config

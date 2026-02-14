@@ -433,7 +433,8 @@ def _parse_binary_inputs(data: bytes) -> BinaryInputs:
     instance_num, input_type, display_as = struct.unpack_from("<BBB", data, 0)
     reserved_pins = data[3:11]  # 8 reserved pin bytes
     input_flags, invert, pullups, pulldowns = struct.unpack_from("<BBBB", data, 11)
-    reserved = data[15:30]
+    button_data_byte_index = data[15]
+    reserved = data[16:30]
 
     return BinaryInputs(
         instance_number=instance_num,
@@ -444,6 +445,7 @@ def _parse_binary_inputs(data: bytes) -> BinaryInputs:
         invert=invert,
         pullups=pullups,
         pulldowns=pulldowns,
+        button_data_byte_index=button_data_byte_index,
         reserved=reserved,
     )
 

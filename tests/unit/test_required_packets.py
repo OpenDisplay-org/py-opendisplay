@@ -9,14 +9,17 @@ import pytest
 
 from opendisplay import OpenDisplayDevice
 from opendisplay.exceptions import ConfigParseError
-from opendisplay.models import config_from_json
+from opendisplay.models import config_from_json, config_to_json
 from opendisplay.models.config import (
+    BinaryInputs,
+    DisplayConfig,
     GlobalConfig,
     ManufacturerData,
     PowerOption,
     SystemConfig,
 )
 from opendisplay.protocol.config_parser import parse_tlv_config
+from opendisplay.protocol.config_serializer import serialize_binary_inputs
 
 
 def _system_payload() -> bytes:
@@ -79,6 +82,16 @@ def _wifi_payload() -> bytes:
     return ssid + password + encryption_type + server_url + server_port + reserved
 
 
+def _binary_input_payload(*, button_data_byte_index: int = 0) -> bytes:
+    return (
+        bytes([0x00, 0x01, 0x00])  # instance_number, input_type, display_as
+        + bytes([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17])  # reserved pins
+        + bytes([0x01, 0x02, 0x03, 0x04])  # flags, invert, pullups, pulldowns
+        + bytes([button_data_byte_index & 0xFF])
+        + (b"\x00" * 14)
+    )
+
+
 def test_parse_tlv_requires_system_manufacturer_power() -> None:
     """Parser should fail when required packets are missing."""
     data = _required_tlv(include_manufacturer=False)
@@ -118,6 +131,16 @@ def test_parse_tlv_supports_wifi_config_packet_without_unknown_warning(caplog: p
     assert "Unknown packet type 0x26" not in caplog.text
 
 
+def test_parse_tlv_binary_input_parses_button_data_byte_index() -> None:
+    """Parser should expose BinaryInputs.button_data_byte_index from packet 0x25."""
+    data = _required_tlv() + _packet(4, 0x25, _binary_input_payload(button_data_byte_index=7))
+
+    cfg = parse_tlv_config(data)
+
+    assert len(cfg.binary_inputs) == 1
+    assert cfg.binary_inputs[0].button_data_byte_index == 7
+
+
 def _required_json(*, include_display: bool = True) -> dict:
     packets = [
         {"id": "1", "fields": {}},
@@ -127,6 +150,31 @@ def _required_json(*, include_display: bool = True) -> dict:
     if include_display:
         packets.append({"id": "32", "fields": {}})
     return {"version": 1, "minor_version": 1, "packets": packets}
+
+
+def _minimal_display() -> DisplayConfig:
+    return DisplayConfig(
+        instance_number=0,
+        display_technology=0,
+        panel_ic_type=0,
+        pixel_width=0,
+        pixel_height=0,
+        active_width_mm=0,
+        active_height_mm=0,
+        tag_type=0,
+        rotation=0,
+        reset_pin=0xFF,
+        busy_pin=0xFF,
+        dc_pin=0xFF,
+        cs_pin=0xFF,
+        data_pin=0xFF,
+        partial_update_support=0,
+        color_scheme=0,
+        transmission_modes=0,
+        clk_pin=0xFF,
+        reserved_pins=b"\x00" * 7,
+        reserved=b"\x00" * 15,
+    )
 
 
 def test_config_from_json_requires_display() -> None:
@@ -143,6 +191,81 @@ def test_config_from_json_succeeds_when_display_present() -> None:
     assert cfg.manufacturer.manufacturer_id == 0
     assert cfg.power.power_mode == 0
     assert len(cfg.displays) == 1
+
+
+def test_config_from_json_binary_input_reads_button_data_byte_index() -> None:
+    """JSON import should map button_data_byte_index to BinaryInputs."""
+    payload = _required_json(include_display=True)
+    payload["packets"].append(
+        {
+            "id": "37",
+            "fields": {
+                "instance_number": "0x0",
+                "input_type": "1",
+                "display_as": "0",
+                "input_flags": "0x0",
+                "invert": "0x0",
+                "pullups": "0x0",
+                "pulldowns": "0x0",
+                "button_data_byte_index": "0x9",
+            },
+        }
+    )
+
+    cfg = config_from_json(payload)
+
+    assert len(cfg.binary_inputs) == 1
+    assert cfg.binary_inputs[0].button_data_byte_index == 9
+
+
+def test_config_to_json_binary_input_exports_button_data_byte_index() -> None:
+    """JSON export should include button_data_byte_index for binary inputs."""
+    cfg = GlobalConfig(
+        system=_minimal_system(),
+        manufacturer=_minimal_manufacturer(),
+        power=_minimal_power(),
+        displays=[_minimal_display()],
+        binary_inputs=[
+            BinaryInputs(
+                instance_number=0,
+                input_type=1,
+                display_as=0,
+                reserved_pins=b"\x00" * 8,
+                input_flags=0,
+                invert=0,
+                pullups=0,
+                pulldowns=0,
+                button_data_byte_index=5,
+                reserved=b"\x00" * 14,
+            )
+        ],
+    )
+
+    exported = config_to_json(cfg)
+    packet = next(p for p in exported["packets"] if p["id"] == "37")
+
+    assert packet["fields"]["button_data_byte_index"] == "0x5"
+
+
+def test_serialize_binary_inputs_writes_button_data_byte_index_byte() -> None:
+    """BinaryInputs serializer should write the byte-index field at offset 15."""
+    binary = BinaryInputs(
+        instance_number=0,
+        input_type=1,
+        display_as=0,
+        reserved_pins=b"\x00" * 8,
+        input_flags=0,
+        invert=0,
+        pullups=0,
+        pulldowns=0,
+        button_data_byte_index=6,
+        reserved=b"\x00" * 14,
+    )
+
+    payload = serialize_binary_inputs(binary)
+
+    assert len(payload) == 30
+    assert payload[15] == 6
 
 
 def _minimal_system() -> SystemConfig:

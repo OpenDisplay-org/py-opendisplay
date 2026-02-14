@@ -353,7 +353,8 @@ def serialize_binary_inputs(config: BinaryInputs) -> bytes:
     - invert: uint8
     - pullups: uint8
     - pulldowns: uint8
-    - reserved: 15 bytes
+    - button_data_byte_index: uint8
+    - reserved: 14 bytes
 
     Args:
         config: BinaryInputs instance
@@ -381,9 +382,12 @@ def serialize_binary_inputs(config: BinaryInputs) -> bytes:
         config.pulldowns,
     )
 
+    # Dynamic return byte index (v1+ firmware feature)
+    data += bytes([config.button_data_byte_index & 0xFF])
+
     # Pad with reserved bytes to 30 total
-    reserved = config.reserved if config.reserved else b"\x00" * 15
-    return data + reserved[:15]
+    reserved = config.reserved if config.reserved else b"\x00" * 14
+    return data + reserved[:14]
 
 
 def serialize_wifi_config(config: WifiConfig) -> bytes:

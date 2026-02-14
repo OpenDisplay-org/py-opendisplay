@@ -430,7 +430,7 @@ class DataBus:
 class BinaryInputs:
     """Binary inputs configuration (TLV packet type 0x25, repeatable max 4).
 
-    Size: 29 bytes (packed struct from firmware)
+    Size: 30 bytes (packed struct from firmware)
     """
     instance_number: int  # uint8
     input_type: int  # uint8
@@ -440,9 +440,10 @@ class BinaryInputs:
     invert: int  # uint8 bitfield
     pullups: int  # uint8 bitfield
     pulldowns: int  # uint8 bitfield
-    reserved: bytes  # 15 bytes
+    reserved: bytes = b""  # 14 bytes
+    button_data_byte_index: int = 0  # uint8 (v1+): dynamic return byte index (0-10)
 
-    SIZE: ClassVar[int] = 29
+    SIZE: ClassVar[int] = 30
 
     @classmethod
     def from_bytes(cls, data: bytes) -> BinaryInputs:
@@ -459,7 +460,8 @@ class BinaryInputs:
             invert=data[12],
             pullups=data[13],
             pulldowns=data[14],
-            reserved=data[15:29]
+            button_data_byte_index=data[15],
+            reserved=data[16:30],
         )
 
 
