@@ -282,6 +282,29 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 
 **Note:** The device performs an immediate system reset and does not send an ACK response. The BLE connection will be terminated when the device resets. Wait a few seconds before attempting to reconnect.
 
+### LED Activation (Firmware 1.0+)
+
+Trigger the firmware LED flash routine (`0x0073`):
+
+```python
+from opendisplay import LedFlashConfig, OpenDisplayDevice
+
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    # Provide a typed flash pattern for this activation
+    flash_config = LedFlashConfig.single(
+        color=0xE0,            # RGB packed color byte used by firmware
+        flash_count=2,         # Pulses per loop (0-15)
+        loop_delay_units=2,    # 100ms units (0-15)
+        inter_delay_units=5,   # 100ms units (0-255)
+        brightness=8,          # 1-16
+        group_repeats=1,       # 1-255, or None for infinite
+    )
+    await device.activate_led(led_instance=0, flash_config=flash_config, timeout=30.0)
+```
+
+`activate_led()` waits for the firmware response after the LED routine finishes. If firmware returns an LED-specific error response (`0xFF73`), the method raises `ProtocolError`.
+It validates firmware version first and raises on versions below `1.0` where command `0x0073` is not supported.
+
 ### Configuration Inspection
 
 Access detailed device configuration:

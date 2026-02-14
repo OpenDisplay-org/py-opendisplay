@@ -51,6 +51,7 @@ from .models.enums import (
     get_board_type_name,
     get_manufacturer_name,
 )
+from .models.led_flash import LedFlashConfig, LedFlashStep
 from .protocol import MANUFACTURER_ID, SERVICE_UUID
 
 __version__ = "0.1.0"
@@ -74,6 +75,8 @@ __all__ = [
     "PowerOption",
     "DisplayConfig",
     "LedConfig",
+    "LedFlashConfig",
+    "LedFlashStep",
     "SensorData",
     "DataBus",
     "BinaryInputs",

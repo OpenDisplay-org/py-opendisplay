@@ -20,6 +20,7 @@ from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
 from .models.enums import BoardManufacturer, FitMode, RefreshMode
 from .models.firmware import FirmwareVersion
+from .models.led_flash import LedFlashConfig
 from .protocol import (
     CHUNK_SIZE,
     MAX_COMPRESSED_SIZE,
@@ -28,6 +29,7 @@ from .protocol import (
     build_direct_write_end_command,
     build_direct_write_start_compressed,
     build_direct_write_start_uncompressed,
+    build_led_activate_command,
     build_read_config_command,
     build_read_fw_version_command,
     build_reboot_command,
@@ -37,7 +39,7 @@ from .protocol import (
     serialize_config,
     validate_ack_response,
 )
-from .protocol.responses import check_response_type, strip_command_echo
+from .protocol.responses import check_response_type, strip_command_echo, unpack_command_code
 from .transport import BLEConnection
 
 if TYPE_CHECKING:
@@ -395,6 +397,64 @@ class OpenDisplayDevice:
             "Reboot command sent to %s - device will reset (connection will drop)",
             self.mac_address
         )
+
+    async def activate_led(
+        self,
+        led_instance: int,
+        flash_config: LedFlashConfig,
+        timeout: float | None = None,
+    ) -> bytes:
+        """Activate LED flash behavior via firmware command 0x0073 (firmware 1.0+).
+
+        Args:
+            led_instance: LED instance index (0-based)
+            flash_config: Typed flash config for this activation.
+            timeout: Optional response timeout in seconds.
+                Defaults to TIMEOUT_REFRESH because the firmware responds only after
+                the LED routine finishes.
+
+        Returns:
+            Raw ACK response bytes from the device.
+
+        Raises:
+            RuntimeError: If device is not connected.
+            ValueError: If command arguments are invalid.
+            ProtocolError: If firmware version is too old for this command.
+            ProtocolError: If firmware returns an LED activate error response.
+            InvalidResponseError: If ACK response is malformed or mismatched.
+        """
+        if self._connection is None:
+            raise RuntimeError("Device not connected")
+
+        fw = self._fw_version
+        if fw is None:
+            fw = await self.read_firmware_version()
+        if (fw["major"], fw["minor"]) < (1, 0):
+            raise ProtocolError(
+                "LED activate requires firmware >= 1.0, "
+                f"got {fw['major']}.{fw['minor']}"
+            )
+
+        cmd = build_led_activate_command(
+            led_instance=led_instance,
+            flash_config=flash_config,
+        )
+        await self._connection.write_command(cmd)
+
+        response_timeout = self.TIMEOUT_REFRESH if timeout is None else timeout
+        response = await self._connection.read_response(timeout=response_timeout)
+
+        # Firmware LED errors use 0xFF73 + error code payload.
+        if len(response) >= 2 and unpack_command_code(response) == 0xFF73:
+            error_code = response[2] if len(response) >= 3 else None
+            if error_code is None:
+                raise ProtocolError("LED activate failed with malformed error response")
+            raise ProtocolError(
+                f"LED activate failed: firmware error code 0x{error_code:02x}"
+            )
+
+        validate_ack_response(response, CommandCode.LED_ACTIVATE)
+        return response
 
     async def write_config(self, config: GlobalConfig) -> None:
         """Write configuration to device.

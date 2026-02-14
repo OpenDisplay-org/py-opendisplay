@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from enum import IntEnum
 
+from ..models.led_flash import LedFlashConfig
+
 
 class CommandCode(IntEnum):
     """BLE command codes for OpenDisplay protocol."""
@@ -21,6 +23,7 @@ class CommandCode(IntEnum):
     DIRECT_WRITE_START = 0x0070   # Start direct write transfer
     DIRECT_WRITE_DATA = 0x0071    # Send image data chunk
     DIRECT_WRITE_END = 0x0072     # End transfer and refresh display
+    LED_ACTIVATE = 0x0073         # Trigger LED flash pattern (firmware 1.0+)
 
 
 # Protocol constants
@@ -169,6 +172,41 @@ def build_direct_write_end_command(refresh_mode: int = 0) -> bytes:
     cmd = CommandCode.DIRECT_WRITE_END.to_bytes(2, byteorder='big')
     refresh = refresh_mode.to_bytes(1, byteorder='big')
     return cmd + refresh
+
+
+def build_led_activate_command(
+    led_instance: int,
+    flash_config: LedFlashConfig,
+) -> bytes:
+    """Build LED activate command (firmware 1.0+).
+
+    Firmware command format:
+    - With config: [cmd:2][instance:1][flash_config:12]
+
+    Args:
+        led_instance: LED instance index (0-based)
+        flash_config: Typed LED flash config payload
+
+    Returns:
+        Command bytes for 0x0073
+
+    Raises:
+        TypeError: If flash_config is not a LedFlashConfig instance
+        ValueError: If led_instance out of uint8 range
+    """
+    if not 0 <= led_instance <= 0xFF:
+        raise ValueError(f"LED instance out of range: {led_instance} (must be 0-255)")
+
+    cmd = CommandCode.LED_ACTIVATE.to_bytes(2, byteorder="big")
+    payload = bytes([led_instance])
+
+    if not isinstance(flash_config, LedFlashConfig):
+        raise TypeError(
+            "flash_config must be LedFlashConfig (use LedFlashConfig.from_bytes(...) "
+            "if you have raw bytes)"
+        )
+
+    return cmd + payload + flash_config.to_bytes()
 
 
 def build_write_config_command(config_data: bytes) -> tuple[bytes, list[bytes]]:

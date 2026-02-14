@@ -82,6 +82,13 @@ def _wifi_payload() -> bytes:
     return ssid + password + encryption_type + server_url + server_port + reserved
 
 
+def _wifi_payload_legacy() -> bytes:
+    ssid = b"MyWifi".ljust(32, b"\x00")
+    password = b"secret123".ljust(32, b"\x00")
+    encryption_type = bytes([0x03])  # WPA2
+    return ssid + password + encryption_type
+
+
 def _binary_input_payload(*, button_data_byte_index: int = 0) -> bytes:
     return (
         bytes([0x00, 0x01, 0x00])  # instance_number, input_type, display_as
@@ -129,6 +136,20 @@ def test_parse_tlv_supports_wifi_config_packet_without_unknown_warning(caplog: p
     assert cfg.wifi_config.ssid_text == "MyWifi"
     assert cfg.wifi_config.server_port == 2446
     assert "Unknown packet type 0x26" not in caplog.text
+
+
+def test_parse_tlv_supports_legacy_wifi_config_size() -> None:
+    """Parser should accept legacy 65-byte wifi_config packets."""
+    data = _required_tlv() + _packet(4, 0x26, _wifi_payload_legacy())
+
+    cfg = parse_tlv_config(data)
+
+    assert cfg.wifi_config is not None
+    assert cfg.wifi_config.ssid_text == "MyWifi"
+    assert cfg.wifi_config.password_text == "secret123"
+    assert cfg.wifi_config.encryption_type == 0x03
+    assert cfg.wifi_config.server_url_text == ""
+    assert cfg.wifi_config.server_port == 2446
 
 
 def test_parse_tlv_binary_input_parses_button_data_byte_index() -> None:

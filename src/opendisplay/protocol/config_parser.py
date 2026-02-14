@@ -33,6 +33,9 @@ PACKET_TYPE_DATABUS = 0x24
 PACKET_TYPE_BINARY_INPUT = 0x25
 PACKET_TYPE_WIFI_CONFIG = 0x26
 
+WIFI_CONFIG_SIZE = 160
+WIFI_CONFIG_LEGACY_SIZE = 65
+
 
 def parse_config_response(raw_data: bytes) -> GlobalConfig:
     """Parse complete TLV config response from device.
@@ -116,10 +119,20 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
 
         # Extract packet data
         if offset + packet_size > len(data):
-            raise ConfigParseError(
-                f"Packet type 0x{packet_type:02x} truncated: "
-                f"need {packet_size} bytes, have {len(data) - offset}"
-            )
+            remaining = len(data) - offset
+
+            # Legacy firmware can return a short 0x26 payload (SSID/password/encryption only).
+            if packet_type == PACKET_TYPE_WIFI_CONFIG and remaining == WIFI_CONFIG_LEGACY_SIZE:
+                _LOGGER.debug(
+                    "Detected legacy wifi_config packet size (%d bytes)",
+                    WIFI_CONFIG_LEGACY_SIZE,
+                )
+                packet_size = WIFI_CONFIG_LEGACY_SIZE
+            else:
+                raise ConfigParseError(
+                    f"Packet type 0x{packet_type:02x} truncated: "
+                    f"need {packet_size} bytes, have {remaining}"
+                )
 
         packet_data = data[offset:offset + packet_size]
         offset += packet_size
@@ -451,8 +464,23 @@ def _parse_binary_inputs(data: bytes) -> BinaryInputs:
 
 
 def _parse_wifi_config(data: bytes) -> WifiConfig:
-    """Parse WifiConfig packet (0x26, 160 bytes)."""
-    if len(data) < 160:
-        raise ConfigParseError(f"WifiConfig too short: {len(data)} bytes (need 160)")
+    """Parse WifiConfig packet (0x26, legacy 65 bytes or current 160 bytes)."""
+    if len(data) >= WIFI_CONFIG_SIZE:
+        return WifiConfig.from_bytes(data[:WIFI_CONFIG_SIZE])
 
-    return WifiConfig.from_bytes(data[:160])
+    if len(data) == WIFI_CONFIG_LEGACY_SIZE:
+        ssid = data[0:32]
+        password = data[32:64]
+        encryption_type = data[64]
+        return WifiConfig(
+            ssid=ssid,
+            password=password,
+            encryption_type=encryption_type,
+            server_url=b"\x00" * 64,
+            server_port=2446,
+            reserved=b"\x00" * 29,
+        )
+
+    raise ConfigParseError(
+        f"WifiConfig too short: {len(data)} bytes (need {WIFI_CONFIG_LEGACY_SIZE} or {WIFI_CONFIG_SIZE})"
+    )

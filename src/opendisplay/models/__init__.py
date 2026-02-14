@@ -37,6 +37,7 @@ from .enums import (
     get_manufacturer_name,
 )
 from .firmware import FirmwareVersion
+from .led_flash import LedFlashConfig, LedFlashStep
 
 __all__ = [
     "AdvertisementData",
@@ -59,6 +60,8 @@ __all__ = [
     "GlobalConfig",
     "ICType",
     "LedConfig",
+    "LedFlashConfig",
+    "LedFlashStep",
     "ManufacturerData",
     "PowerMode",
     "PowerOption",

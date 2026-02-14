@@ -1,5 +1,6 @@
 import pytest
 
+from opendisplay.models.led_flash import LedFlashConfig, LedFlashStep
 from opendisplay.protocol.commands import (
     CHUNK_SIZE,
     CommandCode,
@@ -7,6 +8,7 @@ from opendisplay.protocol.commands import (
     build_direct_write_end_command,
     build_direct_write_start_compressed,
     build_direct_write_start_uncompressed,
+    build_led_activate_command,
     build_read_config_command,
     build_read_fw_version_command,
     build_reboot_command,
@@ -148,6 +150,24 @@ class TestCommandBuilders:
         cmd = build_direct_write_end_command(refresh_mode=1)
         assert cmd == b'\x00\x72\x01'  # cmd + refresh 1
 
+    def test_build_led_activate_command_with_flash_config(self):
+        """Test LED activate command with typed flash config payload."""
+        flash_config = LedFlashConfig(
+            mode=1,
+            brightness=8,
+            step1=LedFlashStep(color=0xE0, flash_count=2, loop_delay_units=2, inter_delay_units=5),
+            step2=LedFlashStep(color=0x1C, flash_count=2, loop_delay_units=2, inter_delay_units=3),
+            step3=LedFlashStep(color=0x03, flash_count=2, loop_delay_units=2, inter_delay_units=1),
+            group_repeats=1,
+        )
+        cmd = build_led_activate_command(led_instance=1, flash_config=flash_config)
+        assert cmd == b"\x00\x73\x01" + flash_config.to_bytes()
+
+    def test_build_led_activate_command_rejects_raw_bytes(self):
+        """Test LED activate command requires typed flash config."""
+        with pytest.raises(TypeError, match="must be LedFlashConfig"):
+            build_led_activate_command(led_instance=0, flash_config=b"\x00" * 12)  # type: ignore[arg-type]
+
 
 class TestCommandCode:
     """Test CommandCode enum values."""
@@ -161,6 +181,7 @@ class TestCommandCode:
         assert CommandCode.DIRECT_WRITE_START == 0x0070
         assert CommandCode.DIRECT_WRITE_DATA == 0x0071
         assert CommandCode.DIRECT_WRITE_END == 0x0072
+        assert CommandCode.LED_ACTIVATE == 0x0073
 
     def test_command_code_to_bytes(self):
         """Test command codes convert to correct big-endian bytes."""
