@@ -68,6 +68,21 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 | `STRETCH`           | Distorted    | Yes                    | None (but distorted)    |
 | `CROP`              | Preserved    | Depends on source size | Edges cropped if larger |
 
+## Image Rotation
+
+Rotate source images before fitting/encoding using the `rotate` parameter:
+
+```python
+from opendisplay import OpenDisplayDevice, Rotation
+from PIL import Image
+
+async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
+    image = Image.open("photo.jpg")
+    await device.upload_image(image, rotate=Rotation.ROTATE_90)
+```
+
+Rotation is applied before `fit`, so crop/pad behavior matches the rotated orientation.
+
 ## Dithering Algorithms
 
 E-paper displays have limited color palettes, requiring dithering to convert full-color images. py-opendisplay supports 9 dithering algorithms with different quality/speed tradeoffs:

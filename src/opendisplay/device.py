@@ -18,7 +18,7 @@ from .encoding import (
 from .exceptions import BLETimeoutError, ProtocolError
 from .models.capabilities import DeviceCapabilities
 from .models.config import GlobalConfig
-from .models.enums import BoardManufacturer, FitMode, RefreshMode
+from .models.enums import BoardManufacturer, FitMode, RefreshMode, Rotation
 from .models.firmware import FirmwareVersion
 from .models.led_flash import LedFlashConfig
 from .protocol import (
@@ -613,10 +613,12 @@ class OpenDisplayDevice:
         compress: bool,
         tone_compression: float | str = "auto",
         fit: FitMode = FitMode.STRETCH,
+        rotate: Rotation = Rotation.ROTATE_0,
     ) -> tuple[bytes, bytes | None, Image.Image]:
         """Prepare image for upload.
 
-        Handles fitting, dithering, encoding, and optional compression.
+        Handles optional source rotation, fitting, dithering, encoding,
+        and optional compression.
 
         Args:
             image: PIL Image to prepare
@@ -624,11 +626,13 @@ class OpenDisplayDevice:
             compress: Whether to compress the image data
             tone_compression: Dynamic range compression ("auto", or 0.0-1.0)
             fit: How to map the image to display dimensions
+            rotate: Source image rotation enum (0/90/180/270)
 
         Returns:
             Tuple of (uncompressed_data, compressed_data or None, processed_image)
         """
         target_size = (self.width, self.height)
+        image = self._rotate_source_image(image, rotate)
 
         if image.size != target_size:
             _LOGGER.info(
@@ -671,6 +675,27 @@ class OpenDisplayDevice:
 
         return image_data, compressed_data, dithered
 
+    @staticmethod
+    def _rotate_source_image(image: Image.Image, rotate: Rotation) -> Image.Image:
+        """Rotate source image by enum value before fitting.
+
+        Rotation follows PIL transpose semantics (counter-clockwise).
+        """
+        if not isinstance(rotate, Rotation):
+            raise TypeError(
+                f"rotate must be Rotation, got {type(rotate).__name__}"
+            )
+
+        if rotate == Rotation.ROTATE_0:
+            return image
+        if rotate == Rotation.ROTATE_90:
+            return image.transpose(Image.Transpose.ROTATE_90)
+        if rotate == Rotation.ROTATE_180:
+            return image.transpose(Image.Transpose.ROTATE_180)
+        if rotate == Rotation.ROTATE_270:
+            return image.transpose(Image.Transpose.ROTATE_270)
+        return image
+
     async def upload_image(
             self,
             image: Image.Image,
@@ -679,6 +704,7 @@ class OpenDisplayDevice:
             compress: bool = True,
             tone_compression: float | str = "auto",
             fit: FitMode = FitMode.CONTAIN,
+            rotate: Rotation = Rotation.ROTATE_0,
     ) -> Image.Image:
         """Upload image to device display.
 
@@ -703,6 +729,7 @@ class OpenDisplayDevice:
                 CONTAIN - scale to fit, pad with white
                 COVER - scale to cover, crop overflow
                 CROP - center-crop at native resolution, pad if smaller
+            rotate: Source image rotation enum, applied before fit/encoding.
 
         Raises:
             RuntimeError: If device not interrogated/configured
@@ -726,7 +753,7 @@ class OpenDisplayDevice:
 
         # Prepare image (fit, dither, encode, compress)
         image_data, compressed_data, processed_image = self._prepare_image(
-            image, dither_mode, compress, tone_compression, fit
+            image, dither_mode, compress, tone_compression, fit, rotate
         )
 
         # Choose protocol based on compression and size
