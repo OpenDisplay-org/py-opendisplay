@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.4.0...v5.0.0) (2026-02-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* change upload rotation semantics to be clockwise
+
+### Features
+
+* change upload rotation semantics to be clockwise ([d350f02](https://github.com/OpenDisplay-org/py-opendisplay/commit/d350f0251c2bc473f53accd5a62073080fcb32ac))
+
 ## [4.4.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.3.0...v4.4.0) (2026-02-15)
 
 
