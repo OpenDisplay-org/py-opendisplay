@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.3.0...v4.4.0) (2026-02-15)
+
+
+### Features
+
+* **upload:** add enum-based per-image rotation before fit in pipeline ([38a06bc](https://github.com/OpenDisplay-org/py-opendisplay/commit/38a06bcddc4d65a85c06d1f1790b4033a163fabb))
+
 ## [4.3.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.2.0...v4.3.0) (2026-02-14)
 
 
