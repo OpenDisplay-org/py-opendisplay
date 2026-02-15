@@ -48,6 +48,32 @@ def test_rotate_source_image_requires_rotation_enum() -> None:
         device._rotate_source_image(image, 90)  # type: ignore[arg-type]
 
 
+def test_rotate_source_image_uses_clockwise_semantics() -> None:
+    """ROTATE_90 and ROTATE_270 should rotate clockwise from caller perspective."""
+    device = _device()
+    image = Image.new("RGB", (2, 2))
+    image.putpixel((0, 0), (255, 0, 0))      # A
+    image.putpixel((1, 0), (0, 255, 0))      # B
+    image.putpixel((0, 1), (0, 0, 255))      # C
+    image.putpixel((1, 1), (255, 255, 0))    # D
+
+    rotated_90 = device._rotate_source_image(image, Rotation.ROTATE_90)
+    assert [rotated_90.getpixel((x, y)) for y in range(2) for x in range(2)] == [
+        (0, 0, 255),      # C
+        (255, 0, 0),      # A
+        (255, 255, 0),    # D
+        (0, 255, 0),      # B
+    ]
+
+    rotated_270 = device._rotate_source_image(image, Rotation.ROTATE_270)
+    assert [rotated_270.getpixel((x, y)) for y in range(2) for x in range(2)] == [
+        (0, 255, 0),      # B
+        (255, 255, 0),    # D
+        (255, 0, 0),      # A
+        (0, 0, 255),      # C
+    ]
+
+
 def test_prepare_image_rotates_before_fit(monkeypatch: pytest.MonkeyPatch) -> None:
     """Rotation should be applied before fit strategy sees source dimensions."""
     device = _device(width=2, height=2)

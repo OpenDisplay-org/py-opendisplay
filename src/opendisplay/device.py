@@ -679,7 +679,7 @@ class OpenDisplayDevice:
     def _rotate_source_image(image: Image.Image, rotate: Rotation) -> Image.Image:
         """Rotate source image by enum value before fitting.
 
-        Rotation follows PIL transpose semantics (counter-clockwise).
+        Rotation uses clockwise semantics for API ergonomics.
         """
         if not isinstance(rotate, Rotation):
             raise TypeError(
@@ -689,11 +689,11 @@ class OpenDisplayDevice:
         if rotate == Rotation.ROTATE_0:
             return image
         if rotate == Rotation.ROTATE_90:
-            return image.transpose(Image.Transpose.ROTATE_90)
+            return image.transpose(Image.Transpose.ROTATE_270)
         if rotate == Rotation.ROTATE_180:
             return image.transpose(Image.Transpose.ROTATE_180)
         if rotate == Rotation.ROTATE_270:
-            return image.transpose(Image.Transpose.ROTATE_270)
+            return image.transpose(Image.Transpose.ROTATE_90)
         return image
 
     async def upload_image(

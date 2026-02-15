@@ -82,6 +82,7 @@ async with OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF") as device:
 ```
 
 Rotation is applied before `fit`, so crop/pad behavior matches the rotated orientation.
+Rotation angles use clockwise semantics (`ROTATE_90` = 90 degrees clockwise).
 
 ## Dithering Algorithms
 
