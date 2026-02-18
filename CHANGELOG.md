@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v5.0.0...v5.1.0) (2026-02-18)
+
+
+### Features
+
+* add way of calling prepare_image() without async context ([da53f7e](https://github.com/OpenDisplay-org/py-opendisplay/commit/da53f7eaba02f53e7ea5ffe992f9859d33a78d8c))
+
 ## [5.0.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v4.4.0...v5.0.0) (2026-02-15)
 
 
