@@ -4,6 +4,7 @@ import pytest
 
 from opendisplay import OpenDisplayDevice
 from opendisplay.models.config import (
+    DisplayConfig,
     GlobalConfig,
     ManufacturerData,
     PowerOption,
@@ -49,11 +50,37 @@ def _power_packet() -> PowerOption:
     )
 
 
+def _display_packet() -> DisplayConfig:
+    return DisplayConfig(
+        instance_number=0,
+        display_technology=0,
+        panel_ic_type=0,
+        pixel_width=296,
+        pixel_height=128,
+        active_width_mm=66,
+        active_height_mm=29,
+        tag_type=0,
+        rotation=0,
+        reset_pin=0xFF,
+        busy_pin=0xFF,
+        dc_pin=0xFF,
+        cs_pin=0xFF,
+        data_pin=0,
+        partial_update_support=0,
+        color_scheme=0,
+        transmission_modes=0,
+        clk_pin=0,
+        reserved_pins=b"\x00" * 7,
+        reserved=b"\x00" * 15,
+    )
+
+
 def _config_with_manufacturer(manufacturer_id: int) -> GlobalConfig:
     return GlobalConfig(
         system=_system_packet(),
         manufacturer=_manufacturer_packet(manufacturer_id),
         power=_power_packet(),
+        displays=[_display_packet()],
     )
 
 

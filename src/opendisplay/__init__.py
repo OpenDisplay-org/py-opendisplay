@@ -5,7 +5,7 @@
 
 from epaper_dithering import ColorScheme, DitherMode
 
-from .device import OpenDisplayDevice
+from .device import OpenDisplayDevice, prepare_image
 from .discovery import discover_devices
 from .exceptions import (
     BLEConnectionError,
@@ -60,6 +60,7 @@ __all__ = [
     # Main API
     "OpenDisplayDevice",
     "discover_devices",
+    "prepare_image",
     # Exceptions
     "OpenDisplayError",
     "BLEConnectionError",
