@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.2.0](https://github.com/OpenDisplay/py-opendisplay/compare/v5.1.0...v5.2.0) (2026-03-06)
+
+
+### Features
+
+* Add calibration preset for panel_ic_type 55 ([2852550](https://github.com/OpenDisplay/py-opendisplay/commit/285255061ff1189ca7c399d310b33729f5a6cfb6))
+* Add is_flex property to OpenDisplayDevice ([031a778](https://github.com/OpenDisplay/py-opendisplay/commit/031a7780616e9a475279851304aea88b48ab60d7))
+
 ## [5.1.0](https://github.com/OpenDisplay-org/py-opendisplay/compare/v5.0.0...v5.1.0) (2026-02-18)
 
 
