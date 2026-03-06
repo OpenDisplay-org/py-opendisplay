@@ -337,6 +337,16 @@ class OpenDisplayDevice:
         return self._config
 
     @property
+    def is_flex(self) -> bool:
+        """Return True if this device runs OpenDisplay Flex.
+
+        Currently always True as the basic OpenDisplay standard is not yet
+        implemented. This will be updated once the library can distinguish
+        between Flex and the basic standard.
+        """
+        return True
+
+    @property
     def capabilities(self) -> DeviceCapabilities | None:
         """Get device capabilities (width, height, color scheme, rotation)."""
         return self._capabilities
