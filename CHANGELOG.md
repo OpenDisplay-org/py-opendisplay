@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.0](https://github.com/OpenDisplay/py-opendisplay/compare/v5.2.0...v5.3.0) (2026-03-06)
+
+
+### Features
+
+* **models:** update config models for firmware spec v1.1 ([5bfccea](https://github.com/OpenDisplay/py-opendisplay/commit/5bfccea1d4a528dfcea7839f7d0c35ac421a5cd4))
+
 ## [5.2.0](https://github.com/OpenDisplay/py-opendisplay/compare/v5.1.0...v5.2.0) (2026-03-06)
 
 
