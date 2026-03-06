@@ -1,6 +1,7 @@
 """Automatic measured palette selection and panel capability data for e-paper displays."""
 
 from epaper_dithering import (
+    BWRY_3_97,
     MONO_4_26,
     SOLUM_BWR,
     SPECTRA_7_3_6COLOR,
@@ -29,6 +30,8 @@ DISPLAY_PALETTE_MAP: dict[tuple[int, int], ColorPalette] = {
     (39, 0): MONO_4_26,
     # Solum 2.6" BWR (ep26r_152x296)
     (33, 1): SOLUM_BWR,
+    # 3.97" BWRY (ep397yr_800x480)
+    (55, 3): BWRY_3_97,
     # Add more as color calibration becomes available:
     # (?, 3): BWRY_4_2,  # 4.2" BWRY
     # (?, 1): HANSHOW_BWR,
