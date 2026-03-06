@@ -330,7 +330,8 @@ def config_from_json(data: dict) -> GlobalConfig:
                 transmission_modes=_parse_int(fields.get("transmission_modes", "0")),
                 clk_pin=_parse_int(fields.get("clk_pin", "0xff")),
                 reserved_pins=bytes(7),  # Fixed size
-                reserved=bytes(15)  # Fixed size
+                full_update_mC=_parse_int(fields.get("full_update_mC", "0")),
+                reserved=bytes(13)  # Fixed size
             ))
 
         elif packet_id == 33:  # 0x21 = led

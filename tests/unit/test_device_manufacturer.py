@@ -71,7 +71,8 @@ def _display_packet() -> DisplayConfig:
         transmission_modes=0,
         clk_pin=0,
         reserved_pins=b"\x00" * 7,
-        reserved=b"\x00" * 15,
+        full_update_mC=0,
+        reserved=b"\x00" * 13,
     )
 
 

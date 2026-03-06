@@ -115,8 +115,8 @@ class TestBusType:
 
     def test_bus_type_values(self):
         """Test bus type values."""
-        assert BusType.I2C == 0
-        assert BusType.SPI == 1
+        assert BusType.I2C == 1
+        assert BusType.SPI == 2
 
     def test_bus_type_names(self):
         """Test bus type names."""

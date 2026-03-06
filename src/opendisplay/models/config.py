@@ -14,12 +14,17 @@ from epaper_dithering import ColorScheme
 from .enums import (
     BoardManufacturer,
     BusType,
+    CapacityEstimator,
     DIYBoardType,
     ICType,
+    LedType,
     PowerMode,
     Rotation,
     SeeedBoardType,
+    SensorType,
+    SolumBoardType,
     WaveshareBoardType,
+    WifiEncryption,
     get_board_type_name,
     get_manufacturer_name,
 )
@@ -46,6 +51,11 @@ class SystemConfig:
     def needs_xiaoinit(self) -> bool:
         """Check if xiaoinit() should be called after config load - nRF52840 only (DEVICE_FLAG_XIAOINIT)."""
         return bool(self.device_flags & 0x02)
+
+    @property
+    def needs_ws_pp_init(self) -> bool:
+        """Check if Waveshare PhotoPainter power-on init should be called (DEVICE_FLAG_WS_PP_INIT)."""
+        return bool(self.device_flags & 0x04)
 
     @property
     def ic_type_enum(self) -> ICType | int:
@@ -97,7 +107,7 @@ class ManufacturerData:
         return get_manufacturer_name(self.manufacturer_id)
 
     @property
-    def board_type_enum(self) -> DIYBoardType | SeeedBoardType | WaveshareBoardType | int:
+    def board_type_enum(self) -> DIYBoardType | SeeedBoardType | SolumBoardType | WaveshareBoardType | int:
         """Get board type as manufacturer-specific enum, or raw int if unknown."""
         manufacturer = self.manufacturer_id_enum
         if not isinstance(manufacturer, BoardManufacturer):
@@ -110,6 +120,8 @@ class ManufacturerData:
                 return SeeedBoardType(self.board_type)
             if manufacturer == BoardManufacturer.WAVESHARE:
                 return WaveshareBoardType(self.board_type)
+            if manufacturer == BoardManufacturer.SOLUM:
+                return SolumBoardType(self.board_type)
         except ValueError:
             return self.board_type
 
@@ -173,6 +185,19 @@ class PowerOption:
         except ValueError:
             return self.power_mode
 
+    @property
+    def capacity_estimator_enum(self) -> CapacityEstimator | int:
+        """Get battery chemistry estimator as enum, or raw int if unknown."""
+        try:
+            return CapacityEstimator(self.capacity_estimator)
+        except ValueError:
+            return self.capacity_estimator
+
+    @property
+    def has_battery_sense(self) -> bool:
+        """Return True if device has a battery sense circuit."""
+        return self.battery_sense_pin != 0xFF
+
     SIZE: ClassVar[int] = 32
 
     @classmethod
@@ -226,7 +251,8 @@ class DisplayConfig:
     transmission_modes: int  # uint8 bitfield
     clk_pin: int  # uint8
     reserved_pins: bytes  # 7 reserved pins
-    reserved: bytes  # 15 bytes
+    full_update_mC: int  # uint16 (milli-coulombs per full update)
+    reserved: bytes  # 13 bytes
 
     @property
     def supports_raw(self) -> bool:
@@ -249,8 +275,8 @@ class DisplayConfig:
         return bool(self.transmission_modes & 0x08)
 
     @property
-    def clear_on_boot(self) -> bool:
-        """Check if display should clear screen at bootup (TRANSMISSION_MODE_CLEAR_ON_BOOT)."""
+    def no_boot_text(self) -> bool:
+        """Check if display should suppress boot text (TRANSMISSION_MODE_NO_BOOT_TEXT)."""
         return bool(self.transmission_modes & 0x80)
 
     @property
@@ -305,7 +331,8 @@ class DisplayConfig:
             transmission_modes=data[22],
             clk_pin=data[23],
             reserved_pins=data[24:31],  # pins 2-8
-            reserved=data[31:66]
+            full_update_mC=int.from_bytes(data[31:33], 'little'),
+            reserved=data[33:66]
         )
 
 
@@ -323,6 +350,14 @@ class LedConfig:
     led_4: int  # uint8 (4th channel pin)
     led_flags: int  # uint8 bitfield
     reserved: bytes  # 15 bytes
+
+    @property
+    def led_type_enum(self) -> LedType | int:
+        """Get LED type as enum, or raw int if unknown."""
+        try:
+            return LedType(self.led_type)
+        except ValueError:
+            return self.led_type
 
     SIZE: ClassVar[int] = 22
 
@@ -354,6 +389,14 @@ class SensorData:
     sensor_type: int  # uint16
     bus_id: int  # uint8
     reserved: bytes  # 26 bytes
+
+    @property
+    def sensor_type_enum(self) -> SensorType | int:
+        """Get sensor type as enum, or raw int if unknown."""
+        try:
+            return SensorType(self.sensor_type)
+        except ValueError:
+            return self.sensor_type
 
     SIZE: ClassVar[int] = 30
 
@@ -506,6 +549,14 @@ class WifiConfig:
     def server_url_text(self) -> str:
         """Get server URL/hostname as decoded text."""
         return self.decode_c_string(self.server_url)
+
+    @property
+    def encryption_type_enum(self) -> WifiEncryption | int:
+        """Get WiFi encryption type as enum, or raw int if unknown."""
+        try:
+            return WifiEncryption(self.encryption_type)
+        except ValueError:
+            return self.encryption_type
 
     @classmethod
     def from_bytes(cls, data: bytes) -> WifiConfig:

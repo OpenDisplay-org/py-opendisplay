@@ -43,7 +43,7 @@ def _config(width: int = 2, height: int = 2) -> GlobalConfig:
             rotation=0, reset_pin=0xFF, busy_pin=0xFF, dc_pin=0xFF,
             cs_pin=0xFF, data_pin=0, partial_update_support=0,
             color_scheme=ColorScheme.MONO.value, transmission_modes=0,
-            clk_pin=0, reserved_pins=b"\x00" * 7, reserved=b"\x00" * 15,
+            clk_pin=0, reserved_pins=b"\x00" * 7, full_update_mC=0, reserved=b"\x00" * 13,
         )],
     )
 

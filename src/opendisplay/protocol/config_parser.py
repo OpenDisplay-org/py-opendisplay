@@ -307,7 +307,7 @@ def _parse_power_option(data: bytes) -> PowerOption:
 
 
 def _parse_display_config(data: bytes) -> DisplayConfig:
-    """Parse DisplayConfig packet (0x20, 46 bytes)."""
+    """Parse DisplayConfig packet (0x20, 66 bytes)."""
     if len(data) < 46:
         raise ConfigParseError(f"DisplayConfig too short: {len(data)} bytes (need 46)")
 
@@ -333,7 +333,8 @@ def _parse_display_config(data: bytes) -> DisplayConfig:
     ) = struct.unpack_from("<BBHHHHHHBBBBBBBBBB", data, 0)
 
     reserved_pins = data[24:31]  # 7 reserved pin bytes
-    reserved = data[31:46]  # 15 reserved bytes
+    full_update_mC = int.from_bytes(data[31:33], 'little') if len(data) >= 33 else 0
+    reserved = data[33:] if len(data) >= 33 else data[31:]
 
     return DisplayConfig(
         instance_number=instance_num,
@@ -355,6 +356,7 @@ def _parse_display_config(data: bytes) -> DisplayConfig:
         transmission_modes=trans_modes,
         clk_pin=clk_pin,
         reserved_pins=reserved_pins,
+        full_update_mC=full_update_mC,
         reserved=reserved,
     )
 

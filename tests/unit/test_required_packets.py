@@ -194,7 +194,8 @@ def _minimal_display() -> DisplayConfig:
         transmission_modes=0,
         clk_pin=0xFF,
         reserved_pins=b"\x00" * 7,
-        reserved=b"\x00" * 15,
+        full_update_mC=0,
+        reserved=b"\x00" * 13,
     )
 
 

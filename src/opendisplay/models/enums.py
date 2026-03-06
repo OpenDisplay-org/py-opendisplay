@@ -19,6 +19,7 @@ class ICType(IntEnum):
     ESP32_S3 = 2
     ESP32_C3 = 3
     ESP32_C6 = 4
+    NRF52811 = 5
 
 
 class BoardManufacturer(IntEnum):
@@ -26,6 +27,7 @@ class BoardManufacturer(IntEnum):
     DIY = 0
     SEEED = 1
     WAVESHARE = 2
+    SOLUM = 3
 
 
 class DIYBoardType(IntEnum):
@@ -50,10 +52,48 @@ class WaveshareBoardType(IntEnum):
     ESP32_S3_PHOTOPAINTER = 0
 
 
+class SolumBoardType(IntEnum):
+    """Solum board types."""
+    M3 = 0
+
+
+class CapacityEstimator(IntEnum):
+    """Battery chemistry estimator types."""
+    LI_ION = 1
+    LIFEPO4 = 2
+    SUPERCAP = 3
+    LITHIUM_PRIMARY = 4
+
+
+class LedType(IntEnum):
+    """LED configuration types."""
+    RGB = 0
+    SINGLE = 1
+    RY = 2
+    FOUR_SEPARATE = 3
+
+
+class SensorType(IntEnum):
+    """Sensor types."""
+    TEMPERATURE = 1
+    HUMIDITY = 2
+    AXP2101_PMIC = 3
+
+
+class WifiEncryption(IntEnum):
+    """WiFi encryption types."""
+    NONE = 0
+    WEP = 1
+    WPA = 2
+    WPA2 = 3
+    WPA3 = 4
+
+
 MANUFACTURER_NAMES: Final[dict[BoardManufacturer, str]] = {
     BoardManufacturer.DIY: "DIY",
     BoardManufacturer.SEEED: "Seeed Studio",
     BoardManufacturer.WAVESHARE: "Waveshare",
+    BoardManufacturer.SOLUM: "Solum",
 }
 
 _BOARD_TYPE_NAMES_DIY: Final[dict[DIYBoardType, str]] = {
@@ -63,9 +103,9 @@ _BOARD_TYPE_NAMES_DIY: Final[dict[DIYBoardType, str]] = {
 _BOARD_TYPE_NAMES_SEEED: Final[dict[SeeedBoardType, str]] = {
     SeeedBoardType.EE04: "EE04",
     SeeedBoardType.EN04: "EN04",
-    SeeedBoardType.ESP32_S3: "ESP32_S3",
-    SeeedBoardType.ESP32_C6: "ESP32_C6",
-    SeeedBoardType.ESP32_C3: "ESP32_C3",
+    SeeedBoardType.ESP32_S3: "ESP32-S3",
+    SeeedBoardType.ESP32_C6: "ESP32-C6",
+    SeeedBoardType.ESP32_C3: "ESP32-C3",
     SeeedBoardType.NRF52840: "NRF52840",
     SeeedBoardType.EE05: "EE05",
     SeeedBoardType.EN05: "EN05",
@@ -73,6 +113,10 @@ _BOARD_TYPE_NAMES_SEEED: Final[dict[SeeedBoardType, str]] = {
 
 _BOARD_TYPE_NAMES_WAVESHARE: Final[dict[WaveshareBoardType, str]] = {
     WaveshareBoardType.ESP32_S3_PHOTOPAINTER: "PhotoPainter",
+}
+
+_BOARD_TYPE_NAMES_SOLUM: Final[dict[SolumBoardType, str]] = {
+    SolumBoardType.M3: "M3",
 }
 
 
@@ -98,6 +142,8 @@ def get_board_type_name(manufacturer_id: BoardManufacturer | int, board_type: in
             return _BOARD_TYPE_NAMES_SEEED[SeeedBoardType(board_type)]
         if manufacturer == BoardManufacturer.WAVESHARE:
             return _BOARD_TYPE_NAMES_WAVESHARE[WaveshareBoardType(board_type)]
+        if manufacturer == BoardManufacturer.SOLUM:
+            return _BOARD_TYPE_NAMES_SOLUM[SolumBoardType(board_type)]
     except (ValueError, KeyError):
         return None
 
@@ -112,9 +158,9 @@ class PowerMode(IntEnum):
 
 
 class BusType(IntEnum):
-    """Data bus types for sensors."""
-    I2C = 0
-    SPI = 1
+    """Data bus types."""
+    I2C = 1
+    SPI = 2
 
 
 class Rotation(IntEnum):
