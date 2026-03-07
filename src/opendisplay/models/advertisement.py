@@ -41,6 +41,7 @@ class AdvertisementData:
         connection_requested: Connection-request flag from status byte (v1 only)
         dynamic_data: Dynamic return data block (v1 only)
     """
+
     battery_mv: int
     temperature_c: float
     loop_counter: int
@@ -293,10 +294,7 @@ def parse_advertisement(data: bytes) -> AdvertisementData:
 
     if len(payload) >= LEGACY_LENGTH:
         if payload[:7] != LEGACY_PREFIX:
-            raise ValueError(
-                "Unsupported legacy advertisement signature; expected "
-                f"{LEGACY_PREFIX.hex()} at bytes 0-6"
-            )
+            raise ValueError(f"Unsupported legacy advertisement signature; expected {LEGACY_PREFIX.hex()} at bytes 0-6")
         return _parse_legacy(payload)
 
     raise ValueError(f"Unsupported advertisement format ({len(payload)} bytes)")

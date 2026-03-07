@@ -54,9 +54,7 @@ def _rotate_source_image(image: Image.Image, rotate: Rotation) -> Image.Image:
     Rotation uses clockwise semantics for API ergonomics.
     """
     if not isinstance(rotate, Rotation):
-        raise TypeError(
-            f"rotate must be Rotation, got {type(rotate).__name__}"
-        )
+        raise TypeError(f"rotate must be Rotation, got {type(rotate).__name__}")
 
     if rotate == Rotation.ROTATE_0:
         return image
@@ -127,21 +125,18 @@ def prepare_image(
     if image.size != target_size:
         _LOGGER.info(
             "Fitting image %dx%d -> %dx%d (mode: %s)",
-            image.width, image.height,
-            capabilities.width, capabilities.height,
+            image.width,
+            image.height,
+            capabilities.width,
+            capabilities.height,
             fit.name,
         )
         image = fit_image(image, target_size, fit)
 
     color_scheme = capabilities.color_scheme
-    if (
-        color_scheme == ColorScheme.GRAYSCALE_4
-        and panel_ic_type is not None
-        and panel_ic_type not in PANELS_4GRAY
-    ):
+    if color_scheme == ColorScheme.GRAYSCALE_4 and panel_ic_type is not None and panel_ic_type not in PANELS_4GRAY:
         _LOGGER.warning(
-            "Panel IC 0x%04x is not a known 4-gray panel. "
-            "GRAYSCALE_4 encoding may not display correctly.",
+            "Panel IC 0x%04x is not a known 4-gray panel. GRAYSCALE_4 encoding may not display correctly.",
             panel_ic_type,
         )
 
@@ -189,22 +184,22 @@ class OpenDisplayDevice:
 
     # BLE operation timeouts (seconds)
     TIMEOUT_FIRST_CHUNK = 10.0  # First chunk may take longer
-    TIMEOUT_CHUNK = 2.0          # Subsequent chunks
-    TIMEOUT_ACK = 5.0            # Command acknowledgments
-    TIMEOUT_REFRESH = 90.0       # Display refresh (firmware spec: up to 60s)
+    TIMEOUT_CHUNK = 2.0  # Subsequent chunks
+    TIMEOUT_ACK = 5.0  # Command acknowledgments
+    TIMEOUT_REFRESH = 90.0  # Display refresh (firmware spec: up to 60s)
 
     def __init__(
-            self,
-            mac_address: str | None = None,
-            device_name: str | None = None,
-            ble_device: BLEDevice | None = None,
-            config: GlobalConfig | None = None,
-            capabilities: DeviceCapabilities | None = None,
-            timeout: float = 10.0,
-            discovery_timeout: float = 10.0,
-            max_attempts: int = 4,
-            use_services_cache: bool = True,
-            use_measured_palettes: bool = True,
+        self,
+        mac_address: str | None = None,
+        device_name: str | None = None,
+        ble_device: BLEDevice | None = None,
+        config: GlobalConfig | None = None,
+        capabilities: DeviceCapabilities | None = None,
+        timeout: float = 10.0,
+        discovery_timeout: float = 10.0,
+        max_attempts: int = 4,
+        use_services_cache: bool = True,
+        use_measured_palettes: bool = True,
     ):
         """Initialize OpenDisplay device.
 
@@ -331,17 +326,13 @@ class OpenDisplayDevice:
             RuntimeError: If device not interrogated/configured
         """
         if not self._capabilities:
-            raise RuntimeError(
-                "Device capabilities unknown - interrogate first or provide config/capabilities"
-            )
+            raise RuntimeError("Device capabilities unknown - interrogate first or provide config/capabilities")
         return self._capabilities
 
     def _ensure_manufacturer_data(self) -> BoardManufacturer | int:
         """Ensure manufacturer data is available and return board manufacturer."""
         if not self._config:
-            raise RuntimeError(
-                "Device config unknown - interrogate first or provide config"
-            )
+            raise RuntimeError("Device config unknown - interrogate first or provide config")
         return self._config.manufacturer.manufacturer_id_enum
 
     @property
@@ -407,9 +398,7 @@ class OpenDisplayDevice:
             RuntimeError: If config is missing.
         """
         if not self._config:
-            raise RuntimeError(
-                "Device config unknown - interrogate first or provide config"
-            )
+            raise RuntimeError("Device config unknown - interrogate first or provide config")
         return self._config.manufacturer.board_type
 
     def get_board_type_name(self) -> str | None:
@@ -421,9 +410,7 @@ class OpenDisplayDevice:
             RuntimeError: If config is missing.
         """
         if not self._config:
-            raise RuntimeError(
-                "Device config unknown - interrogate first or provide config"
-            )
+            raise RuntimeError("Device config unknown - interrogate first or provide config")
         return self._config.manufacturer.board_type_name
 
     async def interrogate(self) -> GlobalConfig:
@@ -531,10 +518,7 @@ class OpenDisplayDevice:
         await self._conn.write_command(cmd)
 
         # Device will reset immediately - no ACK expected
-        _LOGGER.info(
-            "Reboot command sent to %s - device will reset (connection will drop)",
-            self.mac_address
-        )
+        _LOGGER.info("Reboot command sent to %s - device will reset (connection will drop)", self.mac_address)
 
     async def activate_led(
         self,
@@ -568,10 +552,7 @@ class OpenDisplayDevice:
         if fw is None:
             fw = await self.read_firmware_version()
         if (fw["major"], fw["minor"]) < (1, 0):
-            raise ProtocolError(
-                "LED activate requires firmware >= 1.0, "
-                f"got {fw['major']}.{fw['minor']}"
-            )
+            raise ProtocolError(f"LED activate requires firmware >= 1.0, got {fw['major']}.{fw['minor']}")
 
         cmd = build_led_activate_command(
             led_instance=led_instance,
@@ -587,9 +568,7 @@ class OpenDisplayDevice:
             error_code = response[2] if len(response) >= 3 else None
             if error_code is None:
                 raise ProtocolError("LED activate failed with malformed error response")
-            raise ProtocolError(
-                f"LED activate failed: firmware error code 0x{error_code:02x}"
-            )
+            raise ProtocolError(f"LED activate failed: firmware error code 0x{error_code:02x}")
 
         validate_ack_response(response, CommandCode.LED_ACTIVATE)
         return response
@@ -626,11 +605,7 @@ class OpenDisplayDevice:
         _LOGGER.debug("Writing config to device %s", self.mac_address)
 
         # Defensive runtime validation for callers that bypass typing.
-        if (
-            config.system is None
-            or config.manufacturer is None
-            or config.power is None
-        ):
+        if config.system is None or config.manufacturer is None or config.power is None:
             missing_packets = []
             if config.system is None:
                 missing_packets.append("system")
@@ -638,9 +613,7 @@ class OpenDisplayDevice:
                 missing_packets.append("manufacturer")
             if config.power is None:
                 missing_packets.append("power")
-            raise ValueError(
-                f"Config missing required packets: {', '.join(missing_packets)}"
-            )
+            raise ValueError(f"Config missing required packets: {', '.join(missing_packets)}")
 
         if not config.displays:
             raise ValueError("Config must have at least one display")
@@ -651,7 +624,7 @@ class OpenDisplayDevice:
         _LOGGER.info(
             "Serialized config: %d bytes (chunking %s)",
             len(config_data),
-            "required" if len(config_data) > 200 else "not needed"
+            "required" if len(config_data) > 200 else "not needed",
         )
 
         # Build command with chunking
@@ -667,12 +640,7 @@ class OpenDisplayDevice:
 
         # Send remaining chunks if needed
         for i, chunk_cmd in enumerate(chunk_cmds, start=1):
-            _LOGGER.debug(
-                "Sending config chunk %d/%d (%d bytes)",
-                i,
-                len(chunk_cmds),
-                len(chunk_cmd)
-            )
+            _LOGGER.debug("Sending config chunk %d/%d (%d bytes)", i, len(chunk_cmds), len(chunk_cmd))
             await self._conn.write_command(chunk_cmd)
 
             # Wait for ACK after each chunk
@@ -706,7 +674,7 @@ class OpenDisplayDevice:
 
         data = config_to_json(self._config)
 
-        with open(file_path, 'w') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
         _LOGGER.info("Exported config to %s", file_path)
@@ -738,7 +706,7 @@ class OpenDisplayDevice:
 
         from .models import config_from_json
 
-        with open(file_path, 'r') as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
 
         _LOGGER.info("Imported config from %s", file_path)
@@ -769,11 +737,7 @@ class OpenDisplayDevice:
         Returns:
             Tuple of (uncompressed_data, compressed_data or None, processed_image)
         """
-        panel_ic_type = (
-            self._config.displays[0].panel_ic_type
-            if self._config and self._config.displays
-            else None
-        )
+        panel_ic_type = self._config.displays[0].panel_ic_type if self._config and self._config.displays else None
         return prepare_image(
             image,
             config=self._config,
@@ -793,14 +757,14 @@ class OpenDisplayDevice:
         return _rotate_source_image(image, rotate)
 
     async def upload_image(
-            self,
-            image: Image.Image,
-            refresh_mode: RefreshMode = RefreshMode.FULL,
-            dither_mode: DitherMode = DitherMode.BURKES,
-            compress: bool = True,
-            tone_compression: float | str = "auto",
-            fit: FitMode = FitMode.CONTAIN,
-            rotate: Rotation = Rotation.ROTATE_0,
+        self,
+        image: Image.Image,
+        refresh_mode: RefreshMode = RefreshMode.FULL,
+        dither_mode: DitherMode = DitherMode.BURKES,
+        compress: bool = True,
+        tone_compression: float | str = "auto",
+        fit: FitMode = FitMode.CONTAIN,
+        rotate: Rotation = Rotation.ROTATE_0,
     ) -> Image.Image:
         """Upload image to device display.
 
@@ -835,9 +799,7 @@ class OpenDisplayDevice:
             Processed image that matches what is sent to the display.
         """
         if not self._capabilities:
-            raise RuntimeError(
-                "Device capabilities unknown - interrogate first or provide config/capabilities"
-            )
+            raise RuntimeError("Device capabilities unknown - interrogate first or provide config/capabilities")
 
         _LOGGER.info(
             "Uploading image to %s (%dx%d, %s)",
@@ -936,9 +898,7 @@ class OpenDisplayDevice:
         # 1. Send START command (different for each protocol)
         if use_compression:
             assert uncompressed_size is not None and compressed_data is not None
-            start_cmd, remaining_compressed = build_direct_write_start_compressed(
-                uncompressed_size, compressed_data
-            )
+            start_cmd, remaining_compressed = build_direct_write_start_compressed(uncompressed_size, compressed_data)
         else:
             start_cmd = build_direct_write_start_uncompressed()
             remaining_compressed = None
@@ -1019,7 +979,7 @@ class OpenDisplayDevice:
                 response = await self._conn.read_response(timeout=self.TIMEOUT_REFRESH)
 
             # Check what response we got (firmware can send 0x0072 on ANY chunk, not just last!)
-            command, is_ack = check_response_type(response)
+            command, _ = check_response_type(response)
 
             if command == CommandCode.DIRECT_WRITE_DATA:
                 # Normal DATA ACK (0x0071) - continue sending chunks

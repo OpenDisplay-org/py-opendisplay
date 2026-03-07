@@ -11,19 +11,19 @@ class CommandCode(IntEnum):
     """BLE command codes for OpenDisplay protocol."""
 
     # Configuration commands
-    READ_CONFIG = 0x0040          # Read TLV configuration
-    WRITE_CONFIG = 0x0041         # Write TLV configuration (chunked)
-    WRITE_CONFIG_CHUNK = 0x0042   # Write config chunk (multi-chunk mode)
+    READ_CONFIG = 0x0040  # Read TLV configuration
+    WRITE_CONFIG = 0x0041  # Write TLV configuration (chunked)
+    WRITE_CONFIG_CHUNK = 0x0042  # Write config chunk (multi-chunk mode)
 
     # Firmware commands
-    READ_FW_VERSION = 0x0043      # Read firmware version
-    REBOOT = 0x000F               # Reboot device
+    READ_FW_VERSION = 0x0043  # Read firmware version
+    REBOOT = 0x000F  # Reboot device
 
     # Image upload commands (direct write mode)
-    DIRECT_WRITE_START = 0x0070   # Start direct write transfer
-    DIRECT_WRITE_DATA = 0x0071    # Send image data chunk
-    DIRECT_WRITE_END = 0x0072     # End transfer and refresh display
-    LED_ACTIVATE = 0x0073         # Trigger LED flash pattern (firmware 1.0+)
+    DIRECT_WRITE_START = 0x0070  # Start direct write transfer
+    DIRECT_WRITE_DATA = 0x0071  # Send image data chunk
+    DIRECT_WRITE_END = 0x0072  # End transfer and refresh display
+    LED_ACTIVATE = 0x0073  # Trigger LED flash pattern (firmware 1.0+)
 
 
 # Protocol constants
@@ -47,7 +47,7 @@ def build_read_config_command() -> bytes:
     Returns:
         Command bytes: 0x0040 (2 bytes, big-endian)
     """
-    return CommandCode.READ_CONFIG.to_bytes(2, byteorder='big')
+    return CommandCode.READ_CONFIG.to_bytes(2, byteorder="big")
 
 
 def build_read_fw_version_command() -> bytes:
@@ -56,7 +56,7 @@ def build_read_fw_version_command() -> bytes:
     Returns:
         Command bytes: 0x0043 (2 bytes, big-endian)
     """
-    return CommandCode.READ_FW_VERSION.to_bytes(2, byteorder='big')
+    return CommandCode.READ_FW_VERSION.to_bytes(2, byteorder="big")
 
 
 def build_reboot_command() -> bytes:
@@ -68,13 +68,10 @@ def build_reboot_command() -> bytes:
     Returns:
         Command bytes: 0x000F (2 bytes, big-endian)
     """
-    return CommandCode.REBOOT.to_bytes(2, byteorder='big')
+    return CommandCode.REBOOT.to_bytes(2, byteorder="big")
 
 
-def build_direct_write_start_compressed(
-        uncompressed_size: int,
-        compressed_data: bytes
-) -> tuple[bytes, bytes]:
+def build_direct_write_start_compressed(uncompressed_size: int, compressed_data: bytes) -> tuple[bytes, bytes]:
     """Build START command for compressed upload with chunking.
 
     To prevent BLE MTU issues, the START command is limited to MAX_START_PAYLOAD
@@ -97,8 +94,8 @@ def build_direct_write_start_compressed(
         - uncompressed_size: Original size before compression (little-endian uint32)
         - compressed_data: First chunk of compressed data
     """
-    cmd = CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder='big')
-    size = uncompressed_size.to_bytes(4, byteorder='little')
+    cmd = CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder="big")
+    size = uncompressed_size.to_bytes(4, byteorder="little")
 
     # Calculate max compressed data that fits in START
     # MAX_START_PAYLOAD = 200 total bytes
@@ -108,12 +105,11 @@ def build_direct_write_start_compressed(
 
     if len(compressed_data) <= max_data_in_start:
         # All compressed data fits in START command
-        return cmd + size + compressed_data, b''
-    else:
-        # Split: first chunk in START, rest returned separately
-        first_chunk = compressed_data[:max_data_in_start]
-        remaining = compressed_data[max_data_in_start:]
-        return cmd + size + first_chunk, remaining
+        return cmd + size + compressed_data, b""
+    # Split: first chunk in START, rest returned separately
+    first_chunk = compressed_data[:max_data_in_start]
+    remaining = compressed_data[max_data_in_start:]
+    return cmd + size + first_chunk, remaining
 
 
 def build_direct_write_start_uncompressed() -> bytes:
@@ -129,7 +125,7 @@ def build_direct_write_start_uncompressed() -> bytes:
         - cmd: 0x0070 (big-endian)
         - NO size, NO data - everything sent via 0x0071 DATA chunks
     """
-    return CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder='big')
+    return CommandCode.DIRECT_WRITE_START.to_bytes(2, byteorder="big")
 
 
 def build_direct_write_data_command(chunk_data: bytes) -> bytes:
@@ -149,7 +145,7 @@ def build_direct_write_data_command(chunk_data: bytes) -> bytes:
     if len(chunk_data) > CHUNK_SIZE:
         raise ValueError(f"Chunk size {len(chunk_data)} exceeds maximum {CHUNK_SIZE}")
 
-    cmd = CommandCode.DIRECT_WRITE_DATA.to_bytes(2, byteorder='big')
+    cmd = CommandCode.DIRECT_WRITE_DATA.to_bytes(2, byteorder="big")
     return cmd + chunk_data
 
 
@@ -169,8 +165,8 @@ def build_direct_write_end_command(refresh_mode: int = 0) -> bytes:
         - cmd: 0x0072 (big-endian)
         - refresh: Refresh mode (0=full, 1=fast)
     """
-    cmd = CommandCode.DIRECT_WRITE_END.to_bytes(2, byteorder='big')
-    refresh = refresh_mode.to_bytes(1, byteorder='big')
+    cmd = CommandCode.DIRECT_WRITE_END.to_bytes(2, byteorder="big")
+    refresh = refresh_mode.to_bytes(1, byteorder="big")
     return cmd + refresh
 
 
@@ -202,8 +198,7 @@ def build_led_activate_command(
 
     if not isinstance(flash_config, LedFlashConfig):
         raise TypeError(
-            "flash_config must be LedFlashConfig (use LedFlashConfig.from_bytes(...) "
-            "if you have raw bytes)"
+            "flash_config must be LedFlashConfig (use LedFlashConfig.from_bytes(...) if you have raw bytes)"
         )
 
     return cmd + payload + flash_config.to_bytes()
@@ -237,8 +232,8 @@ def build_write_config_command(config_data: bytes) -> tuple[bytes, list[bytes]]:
         # first_cmd: [0x00][0x41][total_size:2LE][first_198_bytes]
         # chunks: [[0x00][0x42][chunk_data], ...]
     """
-    cmd_write = CommandCode.WRITE_CONFIG.to_bytes(2, byteorder='big')
-    cmd_chunk = CommandCode.WRITE_CONFIG_CHUNK.to_bytes(2, byteorder='big')
+    cmd_write = CommandCode.WRITE_CONFIG.to_bytes(2, byteorder="big")
+    cmd_chunk = CommandCode.WRITE_CONFIG_CHUNK.to_bytes(2, byteorder="big")
 
     config_len = len(config_data)
 
@@ -248,7 +243,7 @@ def build_write_config_command(config_data: bytes) -> tuple[bytes, list[bytes]]:
 
     # Multi-chunk mode (>200 bytes)
     # First chunk: [cmd][total_size:2LE][first_198_bytes]
-    total_size = config_len.to_bytes(2, byteorder='little')
+    total_size = config_len.to_bytes(2, byteorder="little")
     first_chunk_data_size = CONFIG_CHUNK_SIZE - 2  # 198 bytes
     first_chunk = cmd_write + total_size + config_data[:first_chunk_data_size]
 

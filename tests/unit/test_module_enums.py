@@ -1,6 +1,5 @@
 """Test model enums and conversions."""
 
-
 from opendisplay.models.enums import (
     BoardManufacturer,
     BusType,
@@ -28,8 +27,6 @@ class TestRefreshMode:
         """Test refresh mode names."""
         assert RefreshMode.FULL.name == "FULL"
         assert RefreshMode.FAST.name == "FAST"
-
-
 
 
 class TestICType:

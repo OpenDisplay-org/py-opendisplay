@@ -5,6 +5,7 @@ Multi-cell packs are not supported — the voltage_scaling_factor in
 PowerOption is implementation-specific and cannot be safely used as a
 cell-count multiplier.
 """
+
 from __future__ import annotations
 
 from .models.enums import CapacityEstimator

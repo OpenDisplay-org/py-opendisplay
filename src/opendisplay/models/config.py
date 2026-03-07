@@ -1,8 +1,9 @@
 """TLV configuration data structures.
 
-  These dataclasses map directly to the firmware's TLV packet structures.
-  Reference: OpenDisplayFirmware/src/structs.h
-  """
+These dataclasses map directly to the firmware's TLV packet structures.
+Reference: OpenDisplayFirmware/src/structs.h
+"""
+
 from __future__ import annotations
 
 import math
@@ -36,6 +37,7 @@ class SystemConfig:
 
     Size: 22 bytes (packed struct from firmware)
     """
+
     ic_type: int  # uint16
     communication_modes: int  # uint8 bitfield
     device_flags: int  # uint8 bitfield
@@ -74,11 +76,11 @@ class SystemConfig:
             raise ValueError(f"Invalid SystemConfig size: {len(data)} < {cls.SIZE}")
 
         return cls(
-            ic_type=int.from_bytes(data[0:2], 'little'),
+            ic_type=int.from_bytes(data[0:2], "little"),
             communication_modes=data[2],
             device_flags=data[3],
             pwr_pin=data[4],
-            reserved=data[5:22]
+            reserved=data[5:22],
         )
 
 
@@ -88,6 +90,7 @@ class ManufacturerData:
 
     Size: 22 bytes (packed struct from firmware)
     """
+
     manufacturer_id: int  # uint16
     board_type: int  # uint8
     board_revision: int  # uint8
@@ -141,10 +144,10 @@ class ManufacturerData:
             raise ValueError(f"Invalid ManufacturerData size: {len(data)} < {cls.SIZE}")
 
         return cls(
-            manufacturer_id=int.from_bytes(data[0:2], 'little'),
+            manufacturer_id=int.from_bytes(data[0:2], "little"),
             board_type=data[2],
             board_revision=data[3],
-            reserved=data[4:22]
+            reserved=data[4:22],
         )
 
 
@@ -154,6 +157,7 @@ class PowerOption:
 
     Size: 32 bytes (packed struct from firmware)
     """
+
     power_mode: int  # uint8
     battery_capacity_mah: bytes  # 3 bytes (24-bit little-endian)
     sleep_timeout_ms: int  # uint16
@@ -205,17 +209,17 @@ class PowerOption:
         return cls(
             power_mode=data[0],
             battery_capacity_mah=data[1:4],
-            sleep_timeout_ms=int.from_bytes(data[4:6], 'little'),
+            sleep_timeout_ms=int.from_bytes(data[4:6], "little"),
             tx_power=data[6],
             sleep_flags=data[7],
             battery_sense_pin=data[8],
             battery_sense_enable_pin=data[9],
             battery_sense_flags=data[10],
             capacity_estimator=data[11],
-            voltage_scaling_factor=int.from_bytes(data[12:14], 'little'),
-            deep_sleep_current_ua=int.from_bytes(data[14:18], 'little'),
-            deep_sleep_time_seconds=int.from_bytes(data[18:20], 'little'),
-            reserved=data[20:32]
+            voltage_scaling_factor=int.from_bytes(data[12:14], "little"),
+            deep_sleep_current_ua=int.from_bytes(data[14:18], "little"),
+            deep_sleep_time_seconds=int.from_bytes(data[18:20], "little"),
+            reserved=data[20:32],
         )
 
 
@@ -225,6 +229,7 @@ class DisplayConfig:
 
     Size: 66 bytes (packed struct from firmware)
     """
+
     instance_number: int  # uint8 (0-3)
     display_technology: int  # uint8
     panel_ic_type: int  # uint16
@@ -289,7 +294,7 @@ class DisplayConfig:
             return self.color_scheme
 
     @property
-    def rotation_enum(self) -> Rotation | int: # TODO check what rotation does in firmware
+    def rotation_enum(self) -> Rotation | int:  # TODO check what rotation does in firmware
         """Get rotation as enum, or raw int if unknown."""
         try:
             return Rotation(self.rotation)
@@ -307,12 +312,12 @@ class DisplayConfig:
         return cls(
             instance_number=data[0],
             display_technology=data[1],
-            panel_ic_type=int.from_bytes(data[2:4], 'little'),
-            pixel_width=int.from_bytes(data[4:6], 'little'),
-            pixel_height=int.from_bytes(data[6:8], 'little'),
-            active_width_mm=int.from_bytes(data[8:10], 'little'),
-            active_height_mm=int.from_bytes(data[10:12], 'little'),
-            tag_type=int.from_bytes(data[12:14], 'little'),
+            panel_ic_type=int.from_bytes(data[2:4], "little"),
+            pixel_width=int.from_bytes(data[4:6], "little"),
+            pixel_height=int.from_bytes(data[6:8], "little"),
+            active_width_mm=int.from_bytes(data[8:10], "little"),
+            active_height_mm=int.from_bytes(data[10:12], "little"),
+            tag_type=int.from_bytes(data[12:14], "little"),
             rotation=data[14],
             reset_pin=data[15],
             busy_pin=data[16],
@@ -324,8 +329,8 @@ class DisplayConfig:
             transmission_modes=data[22],
             clk_pin=data[23],
             reserved_pins=data[24:31],  # pins 2-8
-            full_update_mC=int.from_bytes(data[31:33], 'little'),
-            reserved=data[33:66]
+            full_update_mC=int.from_bytes(data[31:33], "little"),
+            reserved=data[33:66],
         )
 
 
@@ -335,6 +340,7 @@ class LedConfig:
 
     Size: 22 bytes (packed struct from firmware)
     """
+
     instance_number: int  # uint8
     led_type: int  # uint8
     led_1_r: int  # uint8 (red channel pin)
@@ -368,7 +374,7 @@ class LedConfig:
             led_3_b=data[4],
             led_4=data[5],
             led_flags=data[6],
-            reserved=data[7:22]
+            reserved=data[7:22],
         )
 
 
@@ -378,6 +384,7 @@ class SensorData:
 
     Size: 30 bytes (packed struct from firmware)
     """
+
     instance_number: int  # uint8
     sensor_type: int  # uint16
     bus_id: int  # uint8
@@ -401,9 +408,9 @@ class SensorData:
 
         return cls(
             instance_number=data[0],
-            sensor_type=int.from_bytes(data[1:3], 'little'),
+            sensor_type=int.from_bytes(data[1:3], "little"),
             bus_id=data[3],
-            reserved=data[4:30]
+            reserved=data[4:30],
         )
 
 
@@ -413,6 +420,7 @@ class DataBus:
 
     Size: 28 bytes (packed struct from firmware)
     """
+
     instance_number: int  # uint8
     bus_type: int  # uint8
     pin_1: int  # uint8 (SCL for I2C)
@@ -446,11 +454,11 @@ class DataBus:
             pin_5=data[6],
             pin_6=data[7],
             pin_7=data[8],
-            bus_speed_hz=int.from_bytes(data[9:13], 'little'),
+            bus_speed_hz=int.from_bytes(data[9:13], "little"),
             bus_flags=data[13],
             pullups=data[14],
             pulldowns=data[15],
-            reserved=data[16:28]
+            reserved=data[16:28],
         )
 
     @property
@@ -468,6 +476,7 @@ class BinaryInputs:
 
     Size: 30 bytes (packed struct from firmware)
     """
+
     instance_number: int  # uint8
     input_type: int  # uint8
     display_as: int  # uint8
@@ -609,6 +618,7 @@ class GlobalConfig:
 
     Corresponds to GlobalConfig struct in firmware.
     """
+
     # Required single-instance packets
     system: SystemConfig
     manufacturer: ManufacturerData

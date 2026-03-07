@@ -1,7 +1,7 @@
 """OpenDisplay BLE Protocol Package.
 
-  Pure Python package for communicating with OpenDisplay BLE e-paper tags.
-  """
+Pure Python package for communicating with OpenDisplay BLE e-paper tags.
+"""
 
 from epaper_dithering import ColorScheme, DitherMode
 

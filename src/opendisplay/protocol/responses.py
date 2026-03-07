@@ -19,7 +19,7 @@ def unpack_command_code(data: bytes, offset: int = 0) -> int:
     Returns:
         Command code as integer
     """
-    return int(struct.unpack(">H", data[offset:offset+2])[0])
+    return int(struct.unpack(">H", data[offset : offset + 2])[0])
 
 
 def strip_command_echo(data: bytes, expected_cmd: CommandCode) -> bytes:
@@ -37,7 +37,7 @@ def strip_command_echo(data: bytes, expected_cmd: CommandCode) -> bytes:
     """
     if len(data) >= 2:
         echo = unpack_command_code(data)
-        if echo == expected_cmd or echo == (expected_cmd | RESPONSE_HIGH_BIT_FLAG):
+        if echo in (expected_cmd, expected_cmd | RESPONSE_HIGH_BIT_FLAG):
             return data[2:]
     return data
 
@@ -80,9 +80,7 @@ def validate_ack_response(data: bytes, expected_command: int) -> None:
     valid_responses = {expected_command, expected_command | RESPONSE_HIGH_BIT_FLAG}
 
     if response_code not in valid_responses:
-        raise InvalidResponseError(
-            f"ACK mismatch: expected 0x{expected_command:04x}, got 0x{response_code:04x}"
-        )
+        raise InvalidResponseError(f"ACK mismatch: expected 0x{expected_command:04x}, got 0x{response_code:04x}")
 
 
 def parse_firmware_version(data: bytes) -> FirmwareVersion:
@@ -100,16 +98,12 @@ def parse_firmware_version(data: bytes) -> FirmwareVersion:
         InvalidResponseError: If response format invalid
     """
     if len(data) < 5:
-        raise InvalidResponseError(
-            f"Firmware version response too short: {len(data)} bytes (need at least 5)"
-        )
+        raise InvalidResponseError(f"Firmware version response too short: {len(data)} bytes (need at least 5)")
 
     # Validate echo
     echo = unpack_command_code(data)
-    if echo != 0x0043 and echo != (0x0043 | RESPONSE_HIGH_BIT_FLAG):
-        raise InvalidResponseError(
-            f"Firmware version echo mismatch: expected 0x0043, got 0x{echo:04x}"
-        )
+    if echo not in (0x0043, 0x0043 | RESPONSE_HIGH_BIT_FLAG):
+        raise InvalidResponseError(f"Firmware version echo mismatch: expected 0x0043, got 0x{echo:04x}")
 
     major = data[2]
     minor = data[3]
@@ -128,13 +122,11 @@ def parse_firmware_version(data: bytes) -> FirmwareVersion:
         )
 
     # Extract SHA bytes and decode as ASCII string
-    sha_bytes = data[5:5 + sha_length]
+    sha_bytes = data[5 : 5 + sha_length]
     try:
-        sha = sha_bytes.decode('ascii')
+        sha = sha_bytes.decode("ascii")
     except UnicodeDecodeError as e:
-        raise InvalidResponseError(
-            f"Invalid SHA hash encoding (expected ASCII): {e}"
-        ) from e
+        raise InvalidResponseError(f"Invalid SHA hash encoding (expected ASCII): {e}") from e
 
     return {
         "major": major,

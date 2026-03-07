@@ -1,5 +1,13 @@
 # py-opendisplay
 
+[![PyPI](https://img.shields.io/pypi/v/py-opendisplay?style=flat-square)](https://pypi.org/project/py-opendisplay/)
+[![Python](https://img.shields.io/pypi/pyversions/py-opendisplay?style=flat-square)](https://pypi.org/project/py-opendisplay/)
+[![License](https://img.shields.io/github/license/OpenDisplay-org/py-opendisplay?style=flat-square)](LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/OpenDisplay-org/py-opendisplay/test.yml?style=flat-square&label=tests)](https://github.com/OpenDisplay-org/py-opendisplay/actions/workflows/test.yml)
+[![Lint](https://img.shields.io/github/actions/workflow/status/OpenDisplay-org/py-opendisplay/lint.yml?style=flat-square&label=lint)](https://github.com/OpenDisplay-org/py-opendisplay/actions/workflows/lint.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
+[![mypy](https://img.shields.io/badge/mypy-strict-blue?style=flat-square)](https://mypy.readthedocs.io/)
+
 Python library for communicating with OpenDisplay BLE e-paper displays.
 
 ## Installation

@@ -75,6 +75,40 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+[tool.pylint.format]
+max-line-length = 120
+max-module-lines = 1100
+
+[tool.pylint.basic]
+# Allow unit-suffixed names (e.g. full_update_mC for milli-Coulombs)
+variable-rgx = "^[a-zA-Z_][a-zA-Z0-9_]*$"
+argument-rgx = "^[a-zA-Z_][a-zA-Z0-9_]*$"
+attr-rgx = "^[a-zA-Z_][a-zA-Z0-9_]*$"
+
+[tool.pylint.design]
+max-args = 12
+max-positional-arguments = 12
+max-locals = 25
+max-attributes = 22          # config dataclasses have many fields by nature
+max-branches = 25
+max-statements = 70
+max-returns = 9
+
+[tool.pylint.messages_control]
+disable = [
+    "fixme",                   # TODO comments are fine
+    "duplicate-code",          # structural similarity by design
+    "import-outside-toplevel", # intentional lazy imports to avoid circular deps
+    "unnecessary-pass",        # standard exception hierarchy pattern
+    "broad-exception-caught",  # intentional best-effort catch in BLE disconnect
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "prek>=0.3.4",
+    "pylint>=4.0.5",
+]

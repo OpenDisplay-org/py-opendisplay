@@ -63,7 +63,7 @@ async def test_activate_led_with_flash_config_payload() -> None:
 async def test_activate_led_maps_firmware_error_response() -> None:
     """Firmware LED errors (0xFF73) should raise ProtocolError with code."""
     device = OpenDisplayDevice(mac_address="AA:BB:CC:DD:EE:FF")
-    fake = _FakeConnection(response=b"\xFF\x73\x02\x00")
+    fake = _FakeConnection(response=b"\xff\x73\x02\x00")
     device._connection = fake  # Inject fake connection
     device._fw_version = {"major": 1, "minor": 0, "sha": "f378685"}
     flash_config = LedFlashConfig.single(color=0xE0)

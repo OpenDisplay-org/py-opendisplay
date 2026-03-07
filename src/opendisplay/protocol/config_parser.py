@@ -130,21 +130,17 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
                 packet_size = WIFI_CONFIG_LEGACY_SIZE
             else:
                 raise ConfigParseError(
-                    f"Packet type 0x{packet_type:02x} truncated: "
-                    f"need {packet_size} bytes, have {remaining}"
+                    f"Packet type 0x{packet_type:02x} truncated: need {packet_size} bytes, have {remaining}"
                 )
 
-        packet_data = data[offset:offset + packet_size]
+        packet_data = data[offset : offset + packet_size]
         offset += packet_size
 
         # Store packet
         key = (packet_type, packet_number)
         packets[key] = packet_data
 
-        _LOGGER.debug(
-            "Parsed packet: type=0x%02x, num=%d, size=%d",
-            packet_type, packet_number, packet_size
-        )
+        _LOGGER.debug("Parsed packet: type=0x%02x, num=%d, size=%d", packet_type, packet_number, packet_size)
 
     # Parse packets in a single pass
     # Note: Firmware uses global sequential numbering across all packet types
@@ -158,25 +154,25 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
     binary_inputs = []
     wifi_config = None
 
-    for (packet_type, packet_number), data in packets.items():
+    for (packet_type, packet_number), packet_data in packets.items():
         if packet_type == PACKET_TYPE_SYSTEM:
-            system = _parse_system_config(data)
+            system = _parse_system_config(packet_data)
         elif packet_type == PACKET_TYPE_MANUFACTURER:
-            manufacturer = _parse_manufacturer_data(data)
+            manufacturer = _parse_manufacturer_data(packet_data)
         elif packet_type == PACKET_TYPE_POWER:
-            power = _parse_power_option(data)
+            power = _parse_power_option(packet_data)
         elif packet_type == PACKET_TYPE_DISPLAY:
-            displays.append(_parse_display_config(data))
+            displays.append(_parse_display_config(packet_data))
         elif packet_type == PACKET_TYPE_LED:
-            leds.append(_parse_led_config(data))
+            leds.append(_parse_led_config(packet_data))
         elif packet_type == PACKET_TYPE_SENSOR:
-            sensors.append(_parse_sensor_data(data))
+            sensors.append(_parse_sensor_data(packet_data))
         elif packet_type == PACKET_TYPE_DATABUS:
-            data_buses.append(_parse_data_bus(data))
+            data_buses.append(_parse_data_bus(packet_data))
         elif packet_type == PACKET_TYPE_BINARY_INPUT:
-            binary_inputs.append(_parse_binary_inputs(data))
+            binary_inputs.append(_parse_binary_inputs(packet_data))
         elif packet_type == PACKET_TYPE_WIFI_CONFIG:
-            wifi_config = _parse_wifi_config(data)
+            wifi_config = _parse_wifi_config(packet_data)
 
     missing_required = []
     if system is None:
@@ -188,9 +184,7 @@ def parse_tlv_config(data: bytes, version: int = 1) -> GlobalConfig:
     if not displays:
         missing_required.append("display")
     if missing_required:
-        raise ConfigParseError(
-            "Missing required packet(s): " + ", ".join(missing_required)
-        )
+        raise ConfigParseError("Missing required packet(s): " + ", ".join(missing_required))
 
     assert system is not None
     assert manufacturer is not None
@@ -337,7 +331,7 @@ def _parse_display_config(data: bytes) -> DisplayConfig:
     ) = struct.unpack_from("<BBHHHHHHBBBBBBBBBB", data, 0)
 
     reserved_pins = data[24:31]  # 7 reserved pin bytes
-    full_update_mC = int.from_bytes(data[31:33], 'little') if len(data) >= 33 else 0
+    full_update_mC = int.from_bytes(data[31:33], "little") if len(data) >= 33 else 0
     reserved = data[33:] if len(data) >= 33 else data[31:]
 
     return DisplayConfig(
@@ -370,9 +364,7 @@ def _parse_led_config(data: bytes) -> LedConfig:
     if len(data) < 22:
         raise ConfigParseError(f"LedConfig too short: {len(data)} bytes (need 22)")
 
-    instance_num, led_type, led_1, led_2, led_3, led_4, led_flags = struct.unpack_from(
-        "<BBBBBBB", data, 0
-    )
+    instance_num, led_type, led_1, led_2, led_3, led_4, led_flags = struct.unpack_from("<BBBBBBB", data, 0)
     reserved = data[7:22]
 
     return LedConfig(

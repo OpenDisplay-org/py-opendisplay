@@ -13,8 +13,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def discover_devices(
-        timeout: float = 10.0,
-        manufacturer_id: int = MANUFACTURER_ID,
+    timeout: float = 10.0,
+    manufacturer_id: int = MANUFACTURER_ID,
 ) -> dict[str, str]:
     """Discover OpenDisplay BLE devices.
 

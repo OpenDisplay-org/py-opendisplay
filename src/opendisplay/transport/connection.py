@@ -30,12 +30,12 @@ class BLEConnection:
     """
 
     def __init__(
-            self,
-            mac_address: str,
-            ble_device: BLEDevice | None = None,
-            timeout: float = 10.0,
-            max_attempts: int = 4,
-            use_services_cache: bool = True,
+        self,
+        mac_address: str,
+        ble_device: BLEDevice | None = None,
+        timeout: float = 10.0,
+        max_attempts: int = 4,
+        use_services_cache: bool = True,
     ):
         """Initialize BLE connection manager.
 
@@ -84,9 +84,7 @@ class BLEConnection:
 
         try:
             _LOGGER.debug(
-                "Connecting to %s with bleak-retry-connector (max_attempts=%d)",
-                self.mac_address,
-                self.max_attempts
+                "Connecting to %s with bleak-retry-connector (max_attempts=%d)", self.mac_address, self.max_attempts
             )
 
             # Resolve MAC to BLEDevice if not provided
@@ -95,13 +93,10 @@ class BLEConnection:
             else:
                 # For MAC-only usage, scan for the device
                 found_device: BLEDevice | None = await BleakScanner.find_device_by_address(
-                    self.mac_address,
-                    timeout=self.timeout
+                    self.mac_address, timeout=self.timeout
                 )
                 if found_device is None:
-                    raise BLEConnectionError(
-                        f"Device {self.mac_address} not found during scan"
-                    )
+                    raise BLEConnectionError(f"Device {self.mac_address} not found during scan")
                 device = found_device
 
             # Establish connection with retry logic
@@ -120,13 +115,9 @@ class BLEConnection:
             await self._setup_notifications()
 
         except asyncio.TimeoutError as e:
-            raise BLETimeoutError(
-                f"Connection timeout after {self.timeout}s"
-            ) from e
+            raise BLETimeoutError(f"Connection timeout after {self.timeout}s") from e
         except Exception as e:
-            raise BLEConnectionError(
-                f"Failed to connect: {e}"
-            ) from e
+            raise BLEConnectionError(f"Failed to connect: {e}") from e
 
     async def disconnect(self) -> None:
         """Disconnect from device."""
@@ -152,9 +143,7 @@ class BLEConnection:
         services = self._client.services
         service = services.get_service(SERVICE_UUID)
         if not service:
-            raise BLEConnectionError(
-                f"Service {SERVICE_UUID} not found"
-            )
+            raise BLEConnectionError(f"Service {SERVICE_UUID} not found")
 
         # Get first characteristic (should be the only one)
         characteristics = service.characteristics
@@ -171,7 +160,7 @@ class BLEConnection:
 
         _LOGGER.debug("Notifications started")
 
-    def _notification_callback(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
+    def _notification_callback(self, _sender: BleakGATTCharacteristic, data: bytearray) -> None:
         """Handle incoming BLE notifications.
 
         Args:
@@ -223,9 +212,7 @@ class BLEConnection:
                 timeout=timeout,
             )
         except asyncio.TimeoutError as e:
-            raise BLETimeoutError(
-                f"No response received within {timeout}s"
-            ) from e
+            raise BLETimeoutError(f"No response received within {timeout}s") from e
 
     @property
     def is_connected(self) -> bool:

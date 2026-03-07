@@ -18,19 +18,19 @@ class TestUnpackCommandCode:
 
     def test_unpack_command_code_basic(self):
         """Test extracting 2-byte big-endian command code."""
-        data = b'\x00\x40'  # 0x0040
+        data = b"\x00\x40"  # 0x0040
         code = unpack_command_code(data)
         assert code == 0x0040
 
     def test_unpack_command_code_with_high_bit(self):
         """Test extracting command code with ACK high bit set."""
-        data = b'\x80\x43'  # 0x8043 (0x0043 with high bit)
+        data = b"\x80\x43"  # 0x8043 (0x0043 with high bit)
         code = unpack_command_code(data)
         assert code == 0x8043
 
     def test_unpack_command_code_with_offset(self):
         """Test extracting code from offset position."""
-        data = b'\xFF\xFF\x00\x70\x00'
+        data = b"\xff\xff\x00\x70\x00"
         code = unpack_command_code(data, offset=2)
         assert code == 0x0070
 
@@ -47,25 +47,25 @@ class TestStripCommandEcho:
 
     def test_strip_echo_exact_match(self):
         """Test stripping exact command echo."""
-        response = b'\x00\x40\x01\x02\x03'  # Echo + data
+        response = b"\x00\x40\x01\x02\x03"  # Echo + data
         stripped = strip_command_echo(response, CommandCode.READ_CONFIG)
-        assert stripped == b'\x01\x02\x03'
+        assert stripped == b"\x01\x02\x03"
 
     def test_strip_echo_with_high_bit(self):
         """Test stripping echo with ACK high bit set."""
-        response = b'\x80\x43\x01\x05'  # Echo with high bit + data
+        response = b"\x80\x43\x01\x05"  # Echo with high bit + data
         stripped = strip_command_echo(response, CommandCode.READ_FW_VERSION)
-        assert stripped == b'\x01\x05'
+        assert stripped == b"\x01\x05"
 
     def test_strip_echo_no_match(self):
         """Test returns original data when echo doesn't match."""
-        response = b'\x00\x99\x01\x02'  # Wrong echo
+        response = b"\x00\x99\x01\x02"  # Wrong echo
         stripped = strip_command_echo(response, CommandCode.READ_CONFIG)
         assert stripped == response  # Unchanged
 
     def test_strip_echo_too_short(self):
         """Test returns original data when response too short."""
-        response = b'\x40'  # Only 1 byte
+        response = b"\x40"  # Only 1 byte
         stripped = strip_command_echo(response, CommandCode.READ_CONFIG)
         assert stripped == response
 
@@ -75,14 +75,14 @@ class TestCheckResponseType:
 
     def test_check_response_type_without_ack(self):
         """Test detecting command without ACK bit."""
-        response = b'\x00\x40\x01\x02'
+        response = b"\x00\x40\x01\x02"
         command, is_ack = check_response_type(response)
         assert command == CommandCode.READ_CONFIG
         assert is_ack is False
 
     def test_check_response_type_with_ack(self):
         """Test detecting command with ACK bit set."""
-        response = b'\x80\x43\x01\x05'  # 0x8043 = 0x0043 | 0x8000
+        response = b"\x80\x43\x01\x05"  # 0x8043 = 0x0043 | 0x8000
         command, is_ack = check_response_type(response)
         assert command == CommandCode.READ_FW_VERSION
         assert is_ack is True
@@ -101,25 +101,25 @@ class TestValidateAckResponse:
 
     def test_validate_ack_exact_match(self):
         """Test validating ACK with exact command echo."""
-        response = b'\x00\x40'
+        response = b"\x00\x40"
         # Should not raise
         validate_ack_response(response, CommandCode.READ_CONFIG)
 
     def test_validate_ack_with_high_bit(self):
         """Test validating ACK with high bit set."""
-        response = b'\x80\x43'
+        response = b"\x80\x43"
         # Should not raise
         validate_ack_response(response, CommandCode.READ_FW_VERSION)
 
     def test_validate_ack_mismatch(self):
         """Test validation fails on command mismatch."""
-        response = b'\x00\x40'  # READ_CONFIG
+        response = b"\x00\x40"  # READ_CONFIG
         with pytest.raises(InvalidResponseError, match="ACK mismatch"):
             validate_ack_response(response, CommandCode.READ_FW_VERSION)
 
     def test_validate_ack_too_short(self):
         """Test validation fails on short response."""
-        response = b'\x40'  # Only 1 byte
+        response = b"\x40"  # Only 1 byte
         with pytest.raises(InvalidResponseError, match="too short"):
             validate_ack_response(response, CommandCode.READ_CONFIG)
 
@@ -136,13 +136,13 @@ class TestParseFirmwareVersion:
     def test_parse_firmware_version_basic(self):
         """Test parsing firmware version with echo and SHA."""
         # Format: [echo:2][major:1][minor:1][shaLength:1][sha:variable]
-        data = b'\x00\x43\x01\x05\x07gaberin'  # Version 1.5, SHA "gaberin"
+        data = b"\x00\x43\x01\x05\x07gaberin"  # Version 1.5, SHA "gaberin"
         result = parse_firmware_version(data)
         assert result == {"major": 1, "minor": 5, "sha": "gaberin"}
 
     def test_parse_firmware_version_with_ack_bit(self):
         """Test parsing with ACK bit set in echo."""
-        data = b'\x80\x43\x02\x03\x04test'  # Version 2.3 with ACK, SHA "test"
+        data = b"\x80\x43\x02\x03\x04test"  # Version 2.3 with ACK, SHA "test"
         result = parse_firmware_version(data)
         assert result == {"major": 2, "minor": 3, "sha": "test"}
 
@@ -168,23 +168,23 @@ class TestParseFirmwareVersion:
 
     def test_parse_firmware_version_too_short(self):
         """Test parsing fails on truncated response."""
-        data = b'\x00\x43\x01\x05'  # Only 4 bytes, need at least 5 (missing shaLength)
+        data = b"\x00\x43\x01\x05"  # Only 4 bytes, need at least 5 (missing shaLength)
         with pytest.raises(InvalidResponseError, match="too short"):
             parse_firmware_version(data)
 
     def test_parse_firmware_version_wrong_echo(self):
         """Test parsing fails on wrong command echo."""
-        data = b'\x00\x40\x01\x05\x00'  # Wrong command (0x0040 not 0x0043)
+        data = b"\x00\x40\x01\x05\x00"  # Wrong command (0x0040 not 0x0043)
         with pytest.raises(InvalidResponseError, match="echo mismatch"):
             parse_firmware_version(data)
 
     def test_parse_firmware_version_long_sha(self):
         """Test parsing firmware version with long SHA hash."""
         sha_string = "6761626572696e31323334353637383930"  # 34 chars
-        sha_bytes = sha_string.encode('ascii')
+        sha_bytes = sha_string.encode("ascii")
         sha_length = len(sha_bytes)
 
-        data = b'\x80\x43\x01\x00' + bytes([sha_length]) + sha_bytes
+        data = b"\x80\x43\x01\x00" + bytes([sha_length]) + sha_bytes
 
         result = parse_firmware_version(data)
 
@@ -196,7 +196,7 @@ class TestParseFirmwareVersion:
     def test_parse_firmware_version_incomplete_sha(self):
         """Test error when SHA length exceeds actual data."""
         # Claims 10 bytes of SHA but only provides 5
-        data = b'\x80\x43\x01\x05\x0a12345'  # shaLength=10, actual=5
+        data = b"\x80\x43\x01\x05\x0a12345"  # shaLength=10, actual=5
 
         with pytest.raises(InvalidResponseError, match="incomplete.*expected 15 bytes.*got 10"):
             parse_firmware_version(data)
@@ -204,14 +204,14 @@ class TestParseFirmwareVersion:
     def test_parse_firmware_version_invalid_sha_encoding(self):
         """Test error when SHA contains non-ASCII bytes."""
         # Invalid UTF-8 sequence in SHA
-        data = b'\x80\x43\x01\x05\x03\xff\xfe\xfd'
+        data = b"\x80\x43\x01\x05\x03\xff\xfe\xfd"
 
         with pytest.raises(InvalidResponseError, match="Invalid SHA hash encoding"):
             parse_firmware_version(data)
 
     def test_parse_firmware_version_missing_sha(self):
         """Test error when SHA hash is missing (shaLength=0)."""
-        data = b'\x80\x43\x01\x05\x00'  # shaLength=0
+        data = b"\x80\x43\x01\x05\x00"  # shaLength=0
 
         with pytest.raises(InvalidResponseError, match="missing SHA hash"):
             parse_firmware_version(data)

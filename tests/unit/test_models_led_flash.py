@@ -18,14 +18,22 @@ def test_led_flash_config_to_bytes_and_from_bytes_roundtrip() -> None:
 
     raw = cfg.to_bytes()
 
-    assert raw == bytes([
-        0x71,
-        0xE0, 0x22, 0x05,
-        0x1C, 0x43, 0x07,
-        0x03, 0x61, 0x09,
-        0x03,
-        0xAA,
-    ])
+    assert raw == bytes(
+        [
+            0x71,
+            0xE0,
+            0x22,
+            0x05,
+            0x1C,
+            0x43,
+            0x07,
+            0x03,
+            0x61,
+            0x09,
+            0x03,
+            0xAA,
+        ]
+    )
     assert LedFlashConfig.from_bytes(raw) == cfg
 
 

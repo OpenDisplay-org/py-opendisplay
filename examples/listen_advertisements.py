@@ -55,6 +55,7 @@ def _print_packet(address: str, name: str, rssi: int | None, payload: bytes, par
     else:
         print(base)
 
+
 def _print_event(
     address: str,
     name: str,
@@ -126,9 +127,7 @@ async def listen(duration: float, print_all: bool) -> None:
                 count=event.press_count,
             )
 
-    print(
-        f"Listening for OpenDisplay advertisements (manufacturer 0x{MANUFACTURER_ID:04x})..."
-    )
+    print(f"Listening for OpenDisplay advertisements (manufacturer 0x{MANUFACTURER_ID:04x})...")
     if duration > 0:
         print(f"Duration: {duration:.1f}s")
     else:
@@ -151,9 +150,7 @@ async def listen(duration: float, print_all: bool) -> None:
     print(f"  formats_seen={dict(formats_seen)}")
     print(f"  events_seen={dict(event_counts)}")
     for address, entry in sorted(seen.items()):
-        print(
-            f"  {address}: packets_seen={entry.packets_seen}, packets_printed={entry.packets_printed}"
-        )
+        print(f"  {address}: packets_seen={entry.packets_seen}, packets_printed={entry.packets_printed}")
 
 
 def parse_args() -> argparse.Namespace:

@@ -226,7 +226,7 @@ def serialize_display_config(config: DisplayConfig) -> bytes:
     )
 
     # Add reserved pins (7 bytes)
-    reserved_pins = config.reserved_pins if config.reserved_pins else b"\xFF" * 7
+    reserved_pins = config.reserved_pins if config.reserved_pins else b"\xff" * 7
     data += reserved_pins[:7]
 
     # Add reserved bytes (15 bytes) to total 46
@@ -473,9 +473,7 @@ def serialize_config(config: GlobalConfig) -> bytes:
     # Validate size (max 4096 bytes including wrapper and CRC)
     total_size = len(packet_data) + 2  # +2 for CRC
     if total_size > 4096:
-        raise ValueError(
-            f"Config size {total_size} bytes exceeds maximum 4096 bytes"
-        )
+        raise ValueError(f"Config size {total_size} bytes exceeds maximum 4096 bytes")
 
     # Calculate CRC over packet data (excluding CRC itself)
     crc16 = calculate_config_crc(packet_data)

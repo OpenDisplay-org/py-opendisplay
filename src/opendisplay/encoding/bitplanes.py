@@ -12,9 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def encode_bitplanes(
-        image: Image.Image,
-        color_scheme: ColorScheme,
-) -> tuple[bytes, bytes]: # TODO huh, why only two planes? we have displays that have many more colors!?
+    image: Image.Image,
+    color_scheme: ColorScheme,
+) -> tuple[bytes, bytes]:
     """Encode image to bitplane format for BWR/BWY displays.
 
     BWR/BWY displays use two bitplanes:
@@ -32,9 +32,7 @@ def encode_bitplanes(
         ValueError: If color_scheme is not BWR or BWY
     """
     if color_scheme not in (ColorScheme.BWR, ColorScheme.BWY):
-        raise ValueError(
-            f"Bitplane encoding only supports BWR/BWY, got {color_scheme.name}"
-        )
+        raise ValueError(f"Bitplane encoding only supports BWR/BWY, got {color_scheme.name}")
 
     if image.mode != "P":
         raise ValueError(f"Expected palette image, got {image.mode}")
@@ -61,10 +59,10 @@ def encode_bitplanes(
 
             if palette_idx == 1:
                 # White - set BW plane
-                plane1[byte_idx] |= (1 << bit_idx)
+                plane1[byte_idx] |= 1 << bit_idx
             elif palette_idx == 2:
                 # Red/Yellow - set R/Y plane
-                plane2[byte_idx] |= (1 << bit_idx)
+                plane2[byte_idx] |= 1 << bit_idx
             # else: palette_idx == 0 (black) - both planes stay 0
 
     return bytes(plane1), bytes(plane2)

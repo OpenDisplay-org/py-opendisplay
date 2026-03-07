@@ -46,14 +46,9 @@ class LedFlashConfig:
     def __post_init__(self) -> None:
         _check_nibble("mode", self.mode)
         if not 1 <= self.brightness <= 16:
-            raise ValueError(
-                f"brightness out of range: {self.brightness} (must be 1-16)"
-            )
+            raise ValueError(f"brightness out of range: {self.brightness} (must be 1-16)")
         if self.group_repeats is not None and not 1 <= self.group_repeats <= 255:
-            raise ValueError(
-                "group_repeats out of range: "
-                f"{self.group_repeats} (must be 1-255 or None for infinite)"
-            )
+            raise ValueError(f"group_repeats out of range: {self.group_repeats} (must be 1-255 or None for infinite)")
         _check_u8("reserved", self.reserved)
 
     @classmethod
@@ -104,14 +99,22 @@ class LedFlashConfig:
 
         group_repeats_raw = 0xFE if self.group_repeats is None else (self.group_repeats - 1) & 0xFF
 
-        return bytes([
-            mode_and_brightness,
-            c1, p1, i1,
-            c2, p2, i2,
-            c3, p3, i3,
-            group_repeats_raw,
-            self.reserved & 0xFF,
-        ])
+        return bytes(
+            [
+                mode_and_brightness,
+                c1,
+                p1,
+                i1,
+                c2,
+                p2,
+                i2,
+                c3,
+                p3,
+                i3,
+                group_repeats_raw,
+                self.reserved & 0xFF,
+            ]
+        )
 
     @classmethod
     def from_bytes(cls, data: bytes) -> LedFlashConfig:
